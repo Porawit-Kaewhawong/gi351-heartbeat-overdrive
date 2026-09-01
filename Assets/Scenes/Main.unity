@@ -172,7 +172,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HBO.GameConfig
   climaxMode: 1
   baseBpm: 90
-  maxBpmBonus: 60
+  maxBpmBonus: 90
   beatsPerPulse: 2
   minBeatsPerPulse: 1
   approachBeats: 2
@@ -182,19 +182,19 @@ MonoBehaviour:
   inputCooldown: 0.2
   enemies:
   - name: STALKER
-    maxHp: 40
+    maxHp: 100
     sprite: {fileID: -8667466294985060184, guid: 189133c890400284993af6b2ba41d4d7, type: 3}
     attackSprites: []
     bodyColor: {r: 1, g: 0.62, b: 0.35, a: 1}
     scale: 1.5
   - name: BRUTE
-    maxHp: 55
+    maxHp: 150
     sprite: {fileID: -8667466294985060184, guid: 189133c890400284993af6b2ba41d4d7, type: 3}
     attackSprites: []
     bodyColor: {r: 0.85, g: 0.45, b: 1, a: 1}
     scale: 1.75
   - name: WARDEN
-    maxHp: 75
+    maxHp: 200
     sprite: {fileID: -8667466294985060184, guid: 189133c890400284993af6b2ba41d4d7, type: 3}
     attackSprites: []
     bodyColor: {r: 1, g: 0.32, b: 0.34, a: 1}
@@ -455,10 +455,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2f04cf131e651744ba4ee3d1557a00e0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HBO.CharacterVisual
-  bodyColor: {r: 1, g: 0.45, b: 0.4, a: 1}
-  lungeDirection: -1
+  idleSprite: {fileID: -8667466294985060184, guid: 189133c890400284993af6b2ba41d4d7, type: 3}
   attackSprites: []
   attackPoseTime: 0.18
+  bodyColor: {r: 1, g: 0.45, b: 0.4, a: 1}
+  lungeDirection: -1
 --- !u!4 &343766633
 Transform:
   m_ObjectHideFlags: 0
@@ -580,12 +581,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2f04cf131e651744ba4ee3d1557a00e0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HBO.CharacterVisual
-  bodyColor: {r: 0.35, g: 0.85, b: 1, a: 1}
-  lungeDirection: 1
+  idleSprite: {fileID: 2779023822413464520, guid: b6d53f793e98df04b8a9f23c7b3bb2df, type: 3}
   attackSprites:
   - {fileID: 357006442158401228, guid: 3d2a18285b564d547ae3fd1f154ef642, type: 3}
   - {fileID: 5655321678828108626, guid: e17b1c41f6e4a4444b4f95d1ff78dca2, type: 3}
   attackPoseTime: 0.18
+  bodyColor: {r: 0.35, g: 0.85, b: 1, a: 1}
+  lungeDirection: 1
 --- !u!4 &522555392
 Transform:
   m_ObjectHideFlags: 0
