@@ -30,6 +30,40 @@ namespace HBO
         public void Lunge() { Play(LungeCo()); }
         public void FlashHurt() { Play(HurtCo()); }
 
+        /// <summary>เปลี่ยนหน้าตาเป็นมอนสเตอร์ตัวใหม่ โดยคงความโปร่งใสปัจจุบันไว้ (จะได้เฟดเข้าต่อได้)</summary>
+        public void Apply(Sprite sprite, Color color, float scale)
+        {
+            if (sr == null) sr = GetComponent<SpriteRenderer>();
+            if (sprite != null) sr.sprite = sprite;
+            float alpha = sr.color.a;
+            bodyColor = color;
+            var c = color; c.a = color.a * alpha;
+            sr.color = c;
+            if (scale > 0f) transform.localScale = Vector3.one * scale;
+        }
+
+        public IEnumerator FadeOutRoutine(float duration) { return FadeCo(1f, 0f, duration); }
+        public IEnumerator FadeInRoutine(float duration) { return FadeCo(0f, 1f, duration); }
+
+        IEnumerator FadeCo(float from, float to, float duration)
+        {
+            if (co != null) { StopCoroutine(co); co = null; }
+            transform.localPosition = home;
+            // ใช้ unscaled เพราะ hit freeze อาจยังค้าง timeScale อยู่ตอนตัวสุดท้ายตาย
+            for (float t = 0f; t < duration; t += Time.unscaledDeltaTime)
+            {
+                SetAlpha(Mathf.Lerp(from, to, duration > 0f ? t / duration : 1f));
+                yield return null;
+            }
+            SetAlpha(to);
+        }
+
+        void SetAlpha(float a)
+        {
+            if (sr == null) return;
+            var c = bodyColor; c.a = bodyColor.a * a; sr.color = c;
+        }
+
         void Play(IEnumerator routine)
         {
             if (co != null) StopCoroutine(co);

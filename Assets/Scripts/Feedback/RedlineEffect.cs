@@ -17,16 +17,33 @@ namespace HBO
         public Image vignette;
 
         float phase;
+        bool battleOver;
 
         void Start()
         {
             if (vignette != null && vignette.sprite == null)
                 vignette.sprite = PlaceholderAssets.Vignette(256);
+            if (health != null) health.OnBattleEnded += HandleBattleEnd;
         }
+
+        void HandleBattleEnd(bool playerWon) { battleOver = true; }
 
         void Update()
         {
             if (health == null || config == null) return;
+
+            // จบการดวลแล้วชีพจรต้องหยุด ไม่งั้นขอบแดงยังเต้นคาหน้าจอ FLATLINE
+            if (battleOver)
+            {
+                if (vignette != null)
+                {
+                    var col = vignette.color;
+                    col.a = Mathf.MoveTowards(col.a, 0f, Time.unscaledDeltaTime * 1.5f);
+                    vignette.color = col;
+                }
+                if (audioDirector != null) audioDirector.SetHeartbeat(0f, config.heartbeatMinRate);
+                return;
+            }
 
             float frac = health.PlayerFraction;
             float severity = frac < config.redlineStartFraction

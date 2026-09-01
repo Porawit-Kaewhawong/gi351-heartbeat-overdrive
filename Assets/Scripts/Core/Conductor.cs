@@ -19,6 +19,9 @@ namespace HBO
         /// <summary>เวลากลางของระบบจังหวะทั้งเกม</summary>
         public static double Now => AudioSettings.dspTime;
 
+        /// <summary>เวลา dspTime ของบีตแรก — AudioDirector ใช้ตั้งเวลาเริ่มเพลงให้ตรงบีตเป๊ะ</summary>
+        public double FirstBeatTime { get; private set; }
+
         /// <summary>ยิงทุกบีต พร้อม index ของบีต</summary>
         public event Action<int> OnBeat;
 
@@ -31,6 +34,7 @@ namespace HBO
             CurrentBpm = config.baseBpm;
             beatIndex = 0;
             nextBeatTime = Now + 1.0; // หน่วงหนึ่งวินาทีก่อนบีตแรก ให้ผู้เล่นตั้งตัว
+            FirstBeatTime = nextBeatTime;
             running = true;
         }
 
@@ -40,9 +44,10 @@ namespace HBO
         {
             if (!running) return;
 
-            // Climax Shift: ศัตรูเลือดยิ่งน้อย จังหวะยิ่งเร่ง
-            float enemyFrac = health != null ? health.EnemyFraction : 1f;
-            CurrentBpm = config.baseBpm + (1f - enemyFrac) * config.maxBpmBonus;
+            // Climax Shift: อิงความคืบหน้าของทั้งขบวน จังหวะจะได้เร่งขึ้นต่อเนื่องตลอดแมตช์
+            // ไม่ใช่ตกกลับลงมาทุกครั้งที่มอนสเตอร์ตัวใหม่โผล่
+            float progress = health != null ? health.LineupFraction : 1f;
+            CurrentBpm = config.baseBpm + (1f - progress) * config.maxBpmBonus;
 
             while (Now >= nextBeatTime)
             {
