@@ -20,11 +20,14 @@ namespace HBO
         public readonly List<PulseRing> Active = new List<PulseRing>();
 
         bool spawning;
+        /// <summary>ตำแหน่งบีต (ทศนิยม) ที่วงถัดไปควรถูกปล่อย</summary>
+        double nextSpawnBeat;
 
         public void Begin()
         {
             if (spawning) return;
             spawning = true;
+            nextSpawnBeat = conductor.NextBeatIndex;
             conductor.OnBeat += HandleBeat;
         }
 
@@ -36,7 +39,7 @@ namespace HBO
             ClearAll();
         }
 
-        int EffectiveBeatsPerPulse()
+        public float EffectiveBeatsPerPulse()
         {
             float progress = conductor != null && conductor.health != null
                 ? conductor.health.LineupFraction : 1f;
@@ -46,8 +49,12 @@ namespace HBO
         void HandleBeat(int beatIndex)
         {
             if (!spawning) return;
-            int every = EffectiveBeatsPerPulse();
-            if (every > 1 && beatIndex % every != 0) return;
+
+            // beatsPerPulse เป็นทศนิยมได้ (2.00 / 1.75 / 1.50 ...) จึงใช้ modulo ไม่ได้
+            // สะสมตำแหน่งบีตในอุดมคติไว้แทน แล้วปล่อยวงที่บีตแรกที่เลยตำแหน่งนั้นไป
+            // ค่า 1.75 จึงให้ระยะห่างจริงเป็น 2,2,2,1 วนไป — ถี่ขึ้นจริงโดยที่ทุกวงยังลงตรงบีตเป๊ะ
+            if (beatIndex < nextSpawnBeat) return;
+            nextSpawnBeat += Mathf.Max(0.01f, EffectiveBeatsPerPulse());
 
             // ตั้งเวลาจากบีตจริง ไม่ใช่ Conductor.Now ซึ่งช้ากว่าบีตได้ถึงหนึ่งเฟรม
             // ไม่งั้นทุกวงจะมี error สุ่มๆ 16-33 ms ซึ่งกินครึ่งหนึ่งของหน้าต่าง Perfect

@@ -2,15 +2,6 @@ using UnityEngine;
 
 namespace HBO
 {
-    /// <summary>Climax Shift จะเร่งอะไรตอนใกล้จบแมตช์</summary>
-    public enum ClimaxMode
-    {
-        /// <summary>เร่ง BPM — กดดันที่สุด แต่เพลงที่ BPM คงที่จะหลุดจังหวะ</summary>
-        Tempo,
-        /// <summary>ตรึง BPM ไว้ที่ baseBpm แล้วปล่อยวงถี่ขึ้นแทน — เพลงตรงจังหวะตลอด</summary>
-        Density,
-    }
-
     /// <summary>
     /// มอนสเตอร์หนึ่งตัวในขบวน — ทีมอาร์ตใส่สไปรต์ต่อตัวได้จาก Inspector
     /// </summary>
@@ -33,31 +24,33 @@ namespace HBO
     /// </summary>
     public class GameConfig : MonoBehaviour
     {
-        [Header("Tempo (Climax Shift)")]
-        [Tooltip("Tempo = เร่ง BPM ตอนใกล้จบ (เพลงที่ BPM คงที่จะค่อยๆ หลุดจังหวะ)\n" +
-                 "Density = ตรึง BPM ไว้แล้วปล่อยวงถี่ขึ้นแทน (เพลงตรงจังหวะตลอดแมตช์)")]
-        public ClimaxMode climaxMode = ClimaxMode.Tempo;
-        [Tooltip("BPM เริ่มต้นของการดวล")]
+        [Header("Climax Shift (วงถี่ขึ้นเมื่อขบวนศัตรูใกล้ล้ม)")]
+        [Tooltip("BPM ของการดวล — คงที่ตลอดเกมโดยตั้งใจ เพลงจึงไม่มีวันหลุดจังหวะ\n" +
+                 "ความกดดันมาจากความถี่ของวง ไม่ใช่ความเร็วของบีต")]
         public float baseBpm = 90f;
-        [Tooltip("โหมด Tempo: BPM ที่บวกเพิ่มสูงสุดเมื่อขบวนศัตรูใกล้หมด")]
-        public float maxBpmBonus = 60f;
-        [Tooltip("ปล่อยวง Pulse ทุกๆ กี่บีต (ค่าตอนเริ่มเกม)")]
-        public int beatsPerPulse = 2;
-        [Tooltip("โหมด Density: ตอนใกล้จบปล่อยวงทุกกี่บีต (1 = ทุกบีต = ถี่สุด)")]
-        public int minBeatsPerPulse = 1;
-        [Tooltip("วง Pulse ใช้เวลาวิ่งเข้าเป้ากี่บีต (ยิ่ง BPM สูง ยิ่งวิ่งเร็ว)")]
+        [Tooltip("ตัวตั้ง: ตอนเริ่มเกมปล่อยวง Pulse ทุกๆ กี่บีต")]
+        public float beatsPerPulse = 2f;
+        [Tooltip("เลือดศัตรูลดไปทุกๆ กี่ส่วน ถึงจะเร่งหนึ่งขั้น (0.25 = ทุก 25%)")]
+        [Range(0.05f, 1f)] public float climaxStepFraction = 0.25f;
+        [Tooltip("เร่งหนึ่งขั้น = ลด beatsPerPulse ลงเท่าไหร่")]
+        public float beatsPerPulseStep = 0.25f;
+        [Tooltip("พื้น: beatsPerPulse ลงได้ต่ำสุดเท่านี้ (1 = ปล่อยวงทุกบีต)")]
+        public float minBeatsPerPulse = 1f;
+        [Tooltip("วง Pulse ใช้เวลาวิ่งเข้าเป้ากี่บีต (มากขึ้น = อ่านง่ายขึ้น)")]
         public float approachBeats = 3f;
 
         /// <summary>
-        /// ปล่อยวง Pulse ทุกกี่บีต ณ ความคืบหน้าของขบวนนี้ (1 = ยังไม่โดนเลย, 0 = ล้มหมด)
-        /// โหมด Density จะไล่จาก beatsPerPulse ลงไปหา minBeatsPerPulse — ค่าลดลงอย่างเดียว
-        /// กริดใหม่จึงเป็น superset ของกริดเดิม วงที่ปล่อยออกมาไม่มีทางเลื่อนออกจากบีต
+        /// ปล่อยวง Pulse ทุกกี่บีต ณ ความคืบหน้าของขบวนนี้ (lineupFraction: 1 = ยังไม่โดนเลย, 0 = ล้มหมด)
+        ///
+        /// ไล่เป็นขั้นบันได: เลือดลดครบทุก climaxStepFraction ก็ลด beatsPerPulse ลง beatsPerPulseStep
+        /// ค่าเริ่มต้น = ทุก 25% ลด 0.25 → 2.00 / 1.75 / 1.50 / 1.25 (ขั้นสุดท้ายคือตอนเลือดหมดพอดี)
+        /// BPM ไม่ขยับเลยตลอดกระบวนการนี้ เพลงจึงล็อกกับเกมได้ 100%
         /// </summary>
-        public int BeatsPerPulseAt(float lineupFraction)
+        public float BeatsPerPulseAt(float lineupFraction)
         {
-            if (climaxMode != ClimaxMode.Density) return Mathf.Max(1, beatsPerPulse);
-            int n = Mathf.RoundToInt(Mathf.Lerp(beatsPerPulse, minBeatsPerPulse, 1f - lineupFraction));
-            return Mathf.Max(1, n);
+            float lost = 1f - Mathf.Clamp01(lineupFraction);
+            int steps = climaxStepFraction > 0f ? Mathf.FloorToInt(lost / climaxStepFraction) : 0;
+            return Mathf.Max(minBeatsPerPulse, beatsPerPulse - steps * beatsPerPulseStep);
         }
 
         [Header("Judgement Windows (วินาที)")]

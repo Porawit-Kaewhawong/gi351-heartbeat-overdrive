@@ -35,6 +35,7 @@ namespace HBO
         /// <summary>index ของบีตถัดไปที่ยังไม่ถูกยิง</summary>
         public int NextBeatIndex => beatIndex;
 
+
         /// <summary>
         /// เวลาที่คาดว่าบีตหมายเลข index จะเกิด — ประมาณจาก BPM ปัจจุบัน
         /// ยิ่งบีตนั้นใกล้เข้ามา ค่ายิ่งแม่น และตรงเป๊ะเมื่อถึงบีตจริง
@@ -62,17 +63,10 @@ namespace HBO
         {
             if (!running) return;
 
-            // Climax Shift: อิงความคืบหน้าของทั้งขบวน จังหวะจะได้เร่งขึ้นต่อเนื่องตลอดแมตช์
-            // ไม่ใช่ตกกลับลงมาทุกครั้งที่มอนสเตอร์ตัวใหม่โผล่
-            // โหมด Density ตรึง BPM ไว้ ให้ PulseSpawner ไปเร่งความถี่ของวงแทน เพลงจะได้ไม่หลุด
-            float progress = health != null ? health.LineupFraction : 1f;
-            float targetBpm = config.climaxMode == ClimaxMode.Density
-                ? config.baseBpm
-                : config.baseBpm + (1f - progress) * config.maxBpmBonus;
-
-            // ไต่เข้าหาค่าเป้าหมายแทนที่จะกระโดดทันที เพราะ HP ลดเป็นก้อนทุกครั้งที่ตีโดน
-            // ถ้ากระโดด เวลาบีตในอนาคตจะขยับเป็นขั้น วง Pulse ที่กำลังวิ่งอยู่จะสะดุดให้เห็น
-            CurrentBpm = Mathf.MoveTowards(CurrentBpm, targetBpm, 30f * Time.unscaledDeltaTime);
+            // BPM คงที่ตลอดเกมโดยตั้งใจ — Climax Shift ไปเร่งที่ "ความถี่ของวง" ใน PulseSpawner แทน
+            // กริดบีตจึงไม่ขยับเลย เพลงที่ BPM คงที่จึงล็อกกับเกมได้ 100% ตลอดแมตช์
+            // MoveTowards ไว้เผื่อกรณีจูน baseBpm สดๆ ตอน Play mode จะได้ไม่กระชากจนวงที่วิ่งอยู่สะดุด
+            CurrentBpm = Mathf.MoveTowards(CurrentBpm, config.baseBpm, 30f * Time.unscaledDeltaTime);
 
             while (Now >= nextBeatTime)
             {
