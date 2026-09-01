@@ -170,15 +170,37 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 25885f9a7ac11744da3fa8e4b217028f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HBO.GameConfig
+  climaxMode: 1
   baseBpm: 90
   maxBpmBonus: 60
   beatsPerPulse: 2
-  approachBeats: 3
+  minBeatsPerPulse: 1
+  approachBeats: 2
   perfectWindow: 0.065
   greatWindow: 0.13
   lateMissGrace: 0.15
   inputCooldown: 0.2
-  enemyMaxHp: 120
+  enemies:
+  - name: STALKER
+    maxHp: 40
+    sprite: {fileID: -8667466294985060184, guid: 189133c890400284993af6b2ba41d4d7, type: 3}
+    attackSprites: []
+    bodyColor: {r: 1, g: 0.62, b: 0.35, a: 1}
+    scale: 1.5
+  - name: BRUTE
+    maxHp: 55
+    sprite: {fileID: -8667466294985060184, guid: 189133c890400284993af6b2ba41d4d7, type: 3}
+    attackSprites: []
+    bodyColor: {r: 0.85, g: 0.45, b: 1, a: 1}
+    scale: 1.75
+  - name: WARDEN
+    maxHp: 75
+    sprite: {fileID: -8667466294985060184, guid: 189133c890400284993af6b2ba41d4d7, type: 3}
+    attackSprites: []
+    bodyColor: {r: 1, g: 0.32, b: 0.34, a: 1}
+    scale: 2.05
+  enemyFadeOutTime: 0.55
+  enemyFadeInTime: 0.4
   playerMaxHp: 100
   perfectDamage: 7
   greatDamage: 3
@@ -272,13 +294,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HBO.AudioDirector
   config: {fileID: 97573488}
   conductor: {fileID: 97573487}
-  musicLoop: {fileID: 0}
+  musicLoop: {fileID: 8300000, guid: 1d7b260423e77504692044960bd03ffa, type: 3}
   perfectSfx: {fileID: 0}
   greatSfx: {fileID: 0}
   missSfx: {fileID: 0}
   heartbeatSfx: {fileID: 0}
   winSfx: {fileID: 0}
   loseSfx: {fileID: 0}
+  musicBpm: 90
+  syncMusicPitch: 1
+  maxMusicPitch: 1.15
+  beatTickWithMusic: 1
 --- !u!114 &97573494
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -308,6 +334,7 @@ MonoBehaviour:
   config: {fileID: 97573488}
   conductor: {fileID: 97573487}
   target: {fileID: 1055869833}
+  ringSprite: {fileID: 0}
   ringColor: {r: 0.4, g: 0.9, b: 1, a: 1}
 --- !u!4 &97573496
 Transform:
@@ -430,6 +457,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HBO.CharacterVisual
   bodyColor: {r: 1, g: 0.45, b: 0.4, a: 1}
   lungeDirection: -1
+  attackSprites: []
+  attackPoseTime: 0.18
 --- !u!4 &343766633
 Transform:
   m_ObjectHideFlags: 0
@@ -553,6 +582,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HBO.CharacterVisual
   bodyColor: {r: 0.35, g: 0.85, b: 1, a: 1}
   lungeDirection: 1
+  attackSprites:
+  - {fileID: 357006442158401228, guid: 3d2a18285b564d547ae3fd1f154ef642, type: 3}
+  - {fileID: 5655321678828108626, guid: e17b1c41f6e4a4444b4f95d1ff78dca2, type: 3}
+  attackPoseTime: 0.18
 --- !u!4 &522555392
 Transform:
   m_ObjectHideFlags: 0
@@ -763,7 +796,7 @@ MonoBehaviour:
     m_FontStyle: 0
     m_BestFit: 0
     m_MinSize: 10
-    m_MaxSize: 40
+    m_MaxSize: 44
     m_Alignment: 4
     m_AlignByGeometry: 0
     m_RichText: 1
@@ -1354,7 +1387,7 @@ MonoBehaviour:
     m_FontStyle: 1
     m_BestFit: 0
     m_MinSize: 10
-    m_MaxSize: 40
+    m_MaxSize: 76
     m_Alignment: 4
     m_AlignByGeometry: 0
     m_RichText: 1
@@ -1642,7 +1675,7 @@ MonoBehaviour:
     m_FontStyle: 1
     m_BestFit: 0
     m_MinSize: 10
-    m_MaxSize: 40
+    m_MaxSize: 84
     m_Alignment: 4
     m_AlignByGeometry: 0
     m_RichText: 1
@@ -1896,7 +1929,7 @@ MonoBehaviour:
     m_FontStyle: 1
     m_BestFit: 0
     m_MinSize: 10
-    m_MaxSize: 40
+    m_MaxSize: 92
     m_Alignment: 4
     m_AlignByGeometry: 0
     m_RichText: 1
