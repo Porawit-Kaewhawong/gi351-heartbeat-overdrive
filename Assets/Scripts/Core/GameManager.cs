@@ -63,7 +63,7 @@ namespace HBO
         {
             if (Input.GetKeyDown(KeyCode.Escape)) { Quit(); return; }
 
-            bool pressed = Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0);
+            bool pressed = Input.GetKeyDown(KeyCode.Space);
 
             if (State == GameState.Ready && pressed)
             {

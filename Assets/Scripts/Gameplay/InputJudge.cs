@@ -51,7 +51,7 @@ namespace HBO
             if (!active) return;
             AutoMissSweep();
 
-            bool pressed = Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0);
+            bool pressed = Input.GetKeyDown(KeyCode.Space);
             if (!pressed) return;
 
             double now = Conductor.Now;
