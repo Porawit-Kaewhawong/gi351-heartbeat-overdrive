@@ -22,6 +22,13 @@ namespace HBO
         /// <summary>เวลา dspTime ของบีตแรก — AudioDirector ใช้ตั้งเวลาเริ่มเพลงให้ตรงบีตเป๊ะ</summary>
         public double FirstBeatTime { get; private set; }
 
+        /// <summary>
+        /// เวลา dspTime ที่ "แท้จริง" ของบีตที่กำลังยิง OnBeat อยู่
+        /// ใช้ค่านี้ตั้งเวลาแทน Now เสมอ เพราะ OnBeat ถูกยิงตอนต้นเฟรมถัดจากบีตจริง
+        /// จึงช้ากว่าบีตจริงได้ถึงหนึ่งเฟรม (16-33 ms = ครึ่งหนึ่งของหน้าต่าง Perfect)
+        /// </summary>
+        public double CurrentBeatTime { get; private set; }
+
         /// <summary>ยิงทุกบีต พร้อม index ของบีต</summary>
         public event Action<int> OnBeat;
 
@@ -46,11 +53,15 @@ namespace HBO
 
             // Climax Shift: อิงความคืบหน้าของทั้งขบวน จังหวะจะได้เร่งขึ้นต่อเนื่องตลอดแมตช์
             // ไม่ใช่ตกกลับลงมาทุกครั้งที่มอนสเตอร์ตัวใหม่โผล่
+            // โหมด Density ตรึง BPM ไว้ ให้ PulseSpawner ไปเร่งความถี่ของวงแทน เพลงจะได้ไม่หลุด
             float progress = health != null ? health.LineupFraction : 1f;
-            CurrentBpm = config.baseBpm + (1f - progress) * config.maxBpmBonus;
+            CurrentBpm = config.climaxMode == ClimaxMode.Density
+                ? config.baseBpm
+                : config.baseBpm + (1f - progress) * config.maxBpmBonus;
 
             while (Now >= nextBeatTime)
             {
+                CurrentBeatTime = nextBeatTime;
                 OnBeat?.Invoke(beatIndex);
                 beatIndex++;
                 nextBeatTime += BeatInterval;

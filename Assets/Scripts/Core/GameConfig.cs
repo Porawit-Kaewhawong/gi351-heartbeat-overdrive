@@ -2,6 +2,15 @@ using UnityEngine;
 
 namespace HBO
 {
+    /// <summary>Climax Shift จะเร่งอะไรตอนใกล้จบแมตช์</summary>
+    public enum ClimaxMode
+    {
+        /// <summary>เร่ง BPM — กดดันที่สุด แต่เพลงที่ BPM คงที่จะหลุดจังหวะ</summary>
+        Tempo,
+        /// <summary>ตรึง BPM ไว้ที่ baseBpm แล้วปล่อยวงถี่ขึ้นแทน — เพลงตรงจังหวะตลอด</summary>
+        Density,
+    }
+
     /// <summary>
     /// มอนสเตอร์หนึ่งตัวในขบวน — ทีมอาร์ตใส่สไปรต์ต่อตัวได้จาก Inspector
     /// </summary>
@@ -23,12 +32,17 @@ namespace HBO
     public class GameConfig : MonoBehaviour
     {
         [Header("Tempo (Climax Shift)")]
+        [Tooltip("Tempo = เร่ง BPM ตอนใกล้จบ (เพลงที่ BPM คงที่จะค่อยๆ หลุดจังหวะ)\n" +
+                 "Density = ตรึง BPM ไว้แล้วปล่อยวงถี่ขึ้นแทน (เพลงตรงจังหวะตลอดแมตช์)")]
+        public ClimaxMode climaxMode = ClimaxMode.Tempo;
         [Tooltip("BPM เริ่มต้นของการดวล")]
         public float baseBpm = 90f;
-        [Tooltip("BPM ที่บวกเพิ่มสูงสุดเมื่อ HP ศัตรูใกล้หมด (Climax Shift)")]
+        [Tooltip("โหมด Tempo: BPM ที่บวกเพิ่มสูงสุดเมื่อขบวนศัตรูใกล้หมด")]
         public float maxBpmBonus = 60f;
-        [Tooltip("ปล่อยวง Pulse ทุกๆ กี่บีต")]
+        [Tooltip("ปล่อยวง Pulse ทุกๆ กี่บีต (ค่าตอนเริ่มเกม)")]
         public int beatsPerPulse = 2;
+        [Tooltip("โหมด Density: ตอนใกล้จบปล่อยวงทุกกี่บีต (1 = ทุกบีต = ถี่สุด)")]
+        public int minBeatsPerPulse = 1;
         [Tooltip("วง Pulse ใช้เวลาวิ่งเข้าเป้ากี่บีต (ยิ่ง BPM สูง ยิ่งวิ่งเร็ว)")]
         public float approachBeats = 3f;
 

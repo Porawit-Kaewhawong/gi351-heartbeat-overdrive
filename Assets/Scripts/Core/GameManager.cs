@@ -131,8 +131,12 @@ namespace HBO
         }
 
         /// <summary>
-        /// มอนสเตอร์ตัวหนึ่งตายแต่ยังเหลือตัวถัดไป: หยุดปล่อยวงชั่วคราว เฟดตัวเก่าออก เฟดตัวใหม่เข้า
-        /// ต้องเคลียร์วงที่ค้างในสนามด้วย ไม่งั้นวงพวกนั้นจะกลายเป็น Miss ฟรีระหว่างที่ผู้เล่นกดอะไรไม่ได้
+        /// มอนสเตอร์ตัวหนึ่งตายแต่ยังเหลือตัวถัดไป: เฟดตัวเก่าออก เฟดตัวใหม่เข้า
+        ///
+        /// สำคัญ: **ห้ามหยุด PulseSpawner ตรงนี้** วง Pulse ต้องไหลตามบีตต่อเนื่องตลอดการสลับตัว
+        /// ไม่งั้นผู้เล่นจะไม่มีตัวจับจังหวะทางสายตาเลยเกือบวินาที เหลือแต่เพลง พอวงกลับมา
+        /// ก็จะรู้สึกว่าเพลงกับเกมไม่ตรงกัน (แถมยังต้องรออีก approachBeats บีตกว่าวงแรกจะถึงเป้า)
+        /// ปิดแค่ InputJudge พอ แล้วตอน Activate() มันจะทิ้งวงที่เลยเวลาไปให้เองโดยไม่นับ Miss
         /// </summary>
         void HandleEnemyDefeated(int index)
         {
@@ -143,7 +147,6 @@ namespace HBO
         IEnumerator SwapEnemyRoutine()
         {
             judge.Deactivate();
-            spawner.End();
             hud.ShowEnemyDown(health.CurrentEnemy.name);
 
             if (enemyVisual != null) yield return enemyVisual.FadeOutRoutine(config.enemyFadeOutTime);
@@ -156,7 +159,6 @@ namespace HBO
 
             if (State != GameState.Playing) yield break;
             judge.Activate();
-            spawner.Begin();
         }
 
         void HandleBattleEnd(bool playerWon)

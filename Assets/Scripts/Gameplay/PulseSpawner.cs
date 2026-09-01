@@ -36,12 +36,28 @@ namespace HBO
             ClearAll();
         }
 
+        /// <summary>
+        /// โหมด Density: ยิ่งใกล้ล้มขบวนครบ ยิ่งปล่อยวงถี่ขึ้น (beatsPerPulse → minBeatsPerPulse)
+        /// ค่าลดลงเสมอ กริดใหม่จึงเป็น superset ของกริดเดิม จังหวะไม่มีทางเลื่อน
+        /// </summary>
+        int EffectiveBeatsPerPulse()
+        {
+            if (config.climaxMode != ClimaxMode.Density) return config.beatsPerPulse;
+            float progress = conductor != null && conductor.health != null
+                ? conductor.health.LineupFraction : 1f;
+            int n = Mathf.RoundToInt(Mathf.Lerp(config.beatsPerPulse, config.minBeatsPerPulse, 1f - progress));
+            return Mathf.Max(1, n);
+        }
+
         void HandleBeat(int beatIndex)
         {
             if (!spawning) return;
-            if (config.beatsPerPulse > 1 && beatIndex % config.beatsPerPulse != 0) return;
+            int every = EffectiveBeatsPerPulse();
+            if (every > 1 && beatIndex % every != 0) return;
 
-            double now = Conductor.Now;
+            // ตั้งเวลาจากบีตจริง ไม่ใช่ Conductor.Now ซึ่งช้ากว่าบีตได้ถึงหนึ่งเฟรม
+            // ไม่งั้นทุกวงจะมี error สุ่มๆ 16-33 ms ซึ่งกินครึ่งหนึ่งของหน้าต่าง Perfect
+            double now = conductor.CurrentBeatTime;
             double hitTime = now + conductor.BeatInterval * config.approachBeats;
 
             var go = new GameObject("PulseRing");
