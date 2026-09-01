@@ -15,20 +15,32 @@ namespace HBO
         public float startScale = 3.2f;
         float targetScale = 1f;
 
+        Conductor conductor;
+        int targetBeat;
+
         SpriteRenderer sr;
 
-        public void Init(double spawnTime, double hitTime, float targetScale)
+        /// <summary>วงนี้ต้องถูกกดตอนบีตหมายเลข targetBeat ไม่ใช่ตอนเวลาที่ตายตัว</summary>
+        public void Init(Conductor conductor, double spawnTime, int targetBeat, float targetScale)
         {
+            this.conductor = conductor;
+            this.targetBeat = targetBeat;
             SpawnTime = spawnTime;
-            HitTime = hitTime;
             this.targetScale = targetScale;
             sr = GetComponent<SpriteRenderer>();
             if (sr != null && sr.sprite == null)
                 sr.sprite = PlaceholderAssets.SharedPulseRing;
+            RefreshHitTime();
             UpdateVisual();
         }
 
-        void Update() { UpdateVisual(); }
+        // เล็งเวลาใหม่ทุกเฟรม เพื่อให้วงลงตรงบีตจริงเสมอแม้ Climax Shift จะเร่ง BPM ระหว่างที่วงกำลังวิ่ง
+        void RefreshHitTime()
+        {
+            if (conductor != null) HitTime = conductor.TimeOfBeat(targetBeat);
+        }
+
+        void Update() { RefreshHitTime(); UpdateVisual(); }
 
         void UpdateVisual()
         {

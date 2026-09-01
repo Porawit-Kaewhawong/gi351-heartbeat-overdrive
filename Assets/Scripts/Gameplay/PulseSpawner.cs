@@ -57,8 +57,9 @@ namespace HBO
 
             // ตั้งเวลาจากบีตจริง ไม่ใช่ Conductor.Now ซึ่งช้ากว่าบีตได้ถึงหนึ่งเฟรม
             // ไม่งั้นทุกวงจะมี error สุ่มๆ 16-33 ms ซึ่งกินครึ่งหนึ่งของหน้าต่าง Perfect
-            double now = conductor.CurrentBeatTime;
-            double hitTime = now + conductor.BeatInterval * config.approachBeats;
+            double spawnTime = conductor.CurrentBeatTime;
+            // เล็งเป็น "หมายเลขบีต" ไม่ใช่เวลา วงจะได้ลงตรงบีตจริงแม้ BPM จะเร่งขึ้นระหว่างที่วงวิ่งอยู่
+            int targetBeat = beatIndex + Mathf.Max(1, Mathf.RoundToInt(config.approachBeats));
 
             var go = new GameObject("PulseRing");
             go.transform.position = target != null ? target.position : Vector3.zero;
@@ -68,7 +69,7 @@ namespace HBO
             sr.sortingOrder = 10;
             var ring = go.AddComponent<PulseRing>();
             float targetScale = target != null ? target.localScale.x : 1f;
-            ring.Init(now, hitTime, targetScale);
+            ring.Init(conductor, spawnTime, targetBeat, targetScale);
             Active.Add(ring);
         }
 

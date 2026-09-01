@@ -32,9 +32,14 @@ RedlineEffect (อ่าน HP ผู้เล่นทุกเฟรม) ─�
    — และเวลา**ตั้งเวลาของบีต** ให้ใช้ `conductor.CurrentBeatTime` ไม่ใช่ `Now`
    เพราะ `OnBeat` ถูกยิงตอนต้นเฟรมถัดจากบีตจริง จึงช้ากว่าบีตได้ถึงหนึ่งเฟรม
    (16-33 ms ≈ ครึ่งหนึ่งของหน้าต่าง Perfect) ถ้าใช้ `Now` ทุกวงจะมี error สุ่มติดไปด้วย
-2. **ค่าบาลานซ์อยู่ใน GameConfig ที่เดียว** — จูนใน Inspector ได้ระหว่างกด Play
+2. **ของที่ต้องเกิดในอนาคต ให้เล็งเป็น "หมายเลขบีต" ไม่ใช่เวลาที่คำนวณค้างไว้**
+   ใช้ `conductor.TimeOfBeat(index)` แล้วถามใหม่ทุกเฟรม — ห้ามคำนวณ
+   `now + BeatInterval * n` เก็บไว้เป็นค่าตายตัว เพราะ Climax Shift เร่ง BPM ระหว่างทาง
+   บีตจริงจะมาถึงเร็วกว่าที่คำนวณไว้ (ตอนคอมโบแรงๆ คลาดได้ถึง ~60 ms = เกินหน้าต่าง Perfect)
+   `PulseRing` จึงเก็บ `targetBeat` ไว้แล้วเล็งเวลาใหม่ทุกเฟรม
+3. **ค่าบาลานซ์อยู่ใน GameConfig ที่เดียว** — จูนใน Inspector ได้ระหว่างกด Play
    (ค่าจะเด้งกลับตอนออก Play mode — จดค่าที่ชอบไว้แล้วค่อยใส่กลับ)
-3. ระบบคุยกันผ่าน event (OnBeat / OnJudged / OnChanged / OnEnemyDefeated / OnBattleEnded)
+4. ระบบคุยกันผ่าน event (OnBeat / OnJudged / OnChanged / OnEnemyDefeated / OnBattleEnded)
    จะเพิ่มฟีเจอร์ใหม่ให้ subscribe event ไม่ต้องไปแก้ไส้ระบบเดิม
 
 ## สถานะเกมและปุ่ม
