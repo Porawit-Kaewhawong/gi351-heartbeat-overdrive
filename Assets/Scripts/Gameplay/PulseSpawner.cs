@@ -36,17 +36,11 @@ namespace HBO
             ClearAll();
         }
 
-        /// <summary>
-        /// โหมด Density: ยิ่งใกล้ล้มขบวนครบ ยิ่งปล่อยวงถี่ขึ้น (beatsPerPulse → minBeatsPerPulse)
-        /// ค่าลดลงเสมอ กริดใหม่จึงเป็น superset ของกริดเดิม จังหวะไม่มีทางเลื่อน
-        /// </summary>
         int EffectiveBeatsPerPulse()
         {
-            if (config.climaxMode != ClimaxMode.Density) return config.beatsPerPulse;
             float progress = conductor != null && conductor.health != null
                 ? conductor.health.LineupFraction : 1f;
-            int n = Mathf.RoundToInt(Mathf.Lerp(config.beatsPerPulse, config.minBeatsPerPulse, 1f - progress));
-            return Mathf.Max(1, n);
+            return config.BeatsPerPulseAt(progress);
         }
 
         void HandleBeat(int beatIndex)

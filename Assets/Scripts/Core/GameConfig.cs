@@ -48,6 +48,18 @@ namespace HBO
         [Tooltip("วง Pulse ใช้เวลาวิ่งเข้าเป้ากี่บีต (ยิ่ง BPM สูง ยิ่งวิ่งเร็ว)")]
         public float approachBeats = 3f;
 
+        /// <summary>
+        /// ปล่อยวง Pulse ทุกกี่บีต ณ ความคืบหน้าของขบวนนี้ (1 = ยังไม่โดนเลย, 0 = ล้มหมด)
+        /// โหมด Density จะไล่จาก beatsPerPulse ลงไปหา minBeatsPerPulse — ค่าลดลงอย่างเดียว
+        /// กริดใหม่จึงเป็น superset ของกริดเดิม วงที่ปล่อยออกมาไม่มีทางเลื่อนออกจากบีต
+        /// </summary>
+        public int BeatsPerPulseAt(float lineupFraction)
+        {
+            if (climaxMode != ClimaxMode.Density) return Mathf.Max(1, beatsPerPulse);
+            int n = Mathf.RoundToInt(Mathf.Lerp(beatsPerPulse, minBeatsPerPulse, 1f - lineupFraction));
+            return Mathf.Max(1, n);
+        }
+
         [Header("Judgement Windows (วินาที)")]
         public float perfectWindow = 0.065f;
         public float greatWindow = 0.13f;
