@@ -66,6 +66,16 @@ namespace HBO
             if (bpmText != null && conductor != null && conductor.CurrentBpm > 0f)
             {
                 string bpm = Mathf.RoundToInt(conductor.CurrentBpm) + " BPM";
+
+                // โหมด Density ตรึง BPM ไว้ที่ baseBpm โดยตั้งใจ ตัวเลข BPM จึงไม่มีวันขยับ
+                // ต้องโชว์ความถี่ของวงแทน ไม่งั้น HUD จะดูเหมือนเกมค้างทั้งที่ทำงานถูก
+                var cfg = conductor.config;
+                if (cfg != null && cfg.climaxMode == ClimaxMode.Density && health != null)
+                {
+                    int every = cfg.BeatsPerPulseAt(health.LineupFraction);
+                    bpm += every > 1 ? "   ·   EVERY " + every + " BEATS" : "   ·   EVERY BEAT";
+                }
+
                 bpmText.text = health != null && health.EnemyCount > 1
                     ? string.Format("{0}  {1}/{2}   ·   {3}",
                         health.CurrentEnemy.name, health.EnemyIndex + 1, health.EnemyCount, bpm)

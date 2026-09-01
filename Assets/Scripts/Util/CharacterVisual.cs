@@ -4,36 +4,46 @@ using UnityEngine;
 namespace HBO
 {
     /// <summary>
-    /// วิชวลตัวละครแบบง่าย: กะพริบแดงตอนโดนตี พุ่งตัวตอนโจมตี
-    /// ตอนนี้เป็นวงกลม placeholder — ทีมอาร์ตลากสไปรต์จริงใส่ SpriteRenderer ได้เลย
-    /// (ภายหลังเปลี่ยนไปใช้ Animator ได้โดยเรียกเมธอดเดิมสองตัวนี้)
+    /// วิชวลตัวละครแบบง่าย: ท่ายืน + สุ่มท่าโจมตี, กะพริบแดงตอนโดนตี, พุ่งตัวตอนโจมตี
+    /// สไปรต์ทั้งหมดใส่ที่คอมโพเนนต์นี้ที่เดียว ไม่ต้องไปยุ่งกับ SpriteRenderer
+    /// (ภายหลังเปลี่ยนไปใช้ Animator ได้โดยแก้ไส้ใน Lunge()/FlashHurt())
     /// </summary>
     public class CharacterVisual : MonoBehaviour
     {
-        public Color bodyColor = Color.white;
-        [Tooltip("ทิศที่พุ่งเข้าหาอีกฝ่าย: ผู้เล่น = +1, ศัตรู = -1")]
-        public float lungeDirection = 1f;
-
-        [Header("ท่าโจมตี")]
+        [Header("สไปรต์")]
+        [Tooltip("ท่ายืนปกติ — ท่าที่ตัวละครกลับมาหาเสมอหลังโจมตีจบ\n" +
+                 "เว้นว่าง = ใช้สไปรต์ที่อยู่ใน SpriteRenderer อยู่แล้ว หรือวงกลม placeholder")]
+        public Sprite idleSprite;
         [Tooltip("สไปรต์ท่าโจมตี — ตอนตีจะสุ่มมาหนึ่งใบใส่แทนท่ายืน แล้วคืนท่ายืนเมื่อจบ\n" +
                  "เว้นว่าง = ไม่สลับสไปรต์ พุ่งตัวอย่างเดียวเหมือนเดิม")]
         public Sprite[] attackSprites;
         [Tooltip("ค้างท่าโจมตีไว้กี่วินาที (สั้นกว่านี้จะเห็นไม่ทัน)")]
         public float attackPoseTime = 0.18f;
 
+        [Header("อื่นๆ")]
+        [Tooltip("สีที่ tint ทับสไปรต์ — ใช้อาร์ตจริงให้ตั้งเป็นขาวไม่ให้เพี้ยน")]
+        public Color bodyColor = Color.white;
+        [Tooltip("ทิศที่พุ่งเข้าหาอีกฝ่าย: ผู้เล่น = +1, ศัตรู = -1")]
+        public float lungeDirection = 1f;
+
         SpriteRenderer sr;
         Vector3 home;
         Coroutine co;
-        /// <summary>ท่ายืนที่ต้องกลับไปหาเสมอหลังโจมตีจบ</summary>
-        Sprite idleSprite;
+        /// <summary>ท่ายืนที่ authoring ไว้ตั้งแต่แรก ใช้เป็นตัวสำรองเวลามอนสเตอร์ตัวใหม่ไม่มีอาร์ต</summary>
+        Sprite baseSprite;
         int lastAttackIndex = -1;
 
         void Awake()
         {
             sr = GetComponent<SpriteRenderer>();
             if (sr == null) sr = gameObject.AddComponent<SpriteRenderer>();
-            if (sr.sprite == null) sr.sprite = PlaceholderAssets.Circle(256, Color.white);
-            idleSprite = sr.sprite;
+
+            // ลำดับความสำคัญ: ช่อง Idle Sprite > สไปรต์ที่ค้างอยู่ใน SpriteRenderer > วงกลม placeholder
+            if (idleSprite == null)
+                idleSprite = sr.sprite != null ? sr.sprite : PlaceholderAssets.Circle(256, Color.white);
+            sr.sprite = idleSprite;
+
+            baseSprite = idleSprite;
             sr.color = bodyColor;
             home = transform.localPosition;
         }
@@ -63,13 +73,14 @@ namespace HBO
 
         /// <summary>
         /// เปลี่ยนหน้าตาเป็นมอนสเตอร์ตัวใหม่ โดยคงความโปร่งใสปัจจุบันไว้ (จะได้เฟดเข้าต่อได้)
-        /// ท่าโจมตีถูกเซ็ตทับทุกครั้ง เพราะแต่ละตัวมีท่าของตัวเอง — ตัวที่ไม่มีอาร์ตท่าโจมตี
-        /// ต้องไม่ไปหยิบท่าของตัวก่อนหน้ามาใช้
+        /// ท่ายืนและท่าโจมตีถูกเซ็ตทับทุกครั้ง เพราะแต่ละตัวมีอาร์ตของตัวเอง — ตัวที่ยังไม่มีอาร์ต
+        /// ต้องถอยไปใช้ท่าตั้งต้นของ GameObject ไม่ใช่ไปหยิบท่าของมอนสเตอร์ตัวก่อนหน้ามาใช้
         /// </summary>
         public void Apply(Sprite sprite, Sprite[] attacks, Color color, float scale)
         {
             if (sr == null) sr = GetComponent<SpriteRenderer>();
-            if (sprite != null) { sr.sprite = sprite; idleSprite = sprite; }
+            idleSprite = sprite != null ? sprite : baseSprite;
+            sr.sprite = idleSprite;
             attackSprites = attacks;
             lastAttackIndex = -1;
             float alpha = sr.color.a;
