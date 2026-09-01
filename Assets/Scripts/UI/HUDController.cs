@@ -67,14 +67,12 @@ namespace HBO
             {
                 string bpm = Mathf.RoundToInt(conductor.CurrentBpm) + " BPM";
 
-                // โหมด Density ตรึง BPM ไว้ที่ baseBpm โดยตั้งใจ ตัวเลข BPM จึงไม่มีวันขยับ
-                // ต้องโชว์ความถี่ของวงแทน ไม่งั้น HUD จะดูเหมือนเกมค้างทั้งที่ทำงานถูก
+                // BPM คงที่ตลอดเกมโดยตั้งใจ ตัวเลขนั้นจึงไม่มีวันขยับ — ต้องโชว์ความถี่ของวงคู่กันไว้
+                // ไม่งั้น HUD จะดูเหมือนเกมค้างทั้งที่ Climax Shift ทำงานอยู่
                 var cfg = conductor.config;
-                if (cfg != null && cfg.climaxMode == ClimaxMode.Density && health != null)
-                {
-                    int every = cfg.BeatsPerPulseAt(health.LineupFraction);
-                    bpm += every > 1 ? "   ·   EVERY " + every + " BEATS" : "   ·   EVERY BEAT";
-                }
+                if (cfg != null && health != null)
+                    bpm += string.Format("   ·   EVERY {0:0.00} BEATS",
+                        cfg.BeatsPerPulseAt(health.LineupFraction));
 
                 bpmText.text = health != null && health.EnemyCount > 1
                     ? string.Format("{0}  {1}/{2}   ·   {3}",
