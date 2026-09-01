@@ -13,6 +13,8 @@ namespace HBO
         public Conductor conductor;
         [Tooltip("จุดวงเป้า (Timing Zone) ที่วง Pulse วิ่งเข้าหา")]
         public Transform target;
+        [Tooltip("สไปรต์วง Pulse ของทีมอาร์ต — เว้นว่าง = ใช้วงแหวน placeholder")]
+        public Sprite ringSprite;
         public Color ringColor = new Color(0.4f, 0.9f, 1f);
 
         public readonly List<PulseRing> Active = new List<PulseRing>();
@@ -45,6 +47,7 @@ namespace HBO
             var go = new GameObject("PulseRing");
             go.transform.position = target != null ? target.position : Vector3.zero;
             var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = ringSprite != null ? ringSprite : PlaceholderAssets.SharedPulseRing;
             sr.color = ringColor;
             sr.sortingOrder = 10;
             var ring = go.AddComponent<PulseRing>();

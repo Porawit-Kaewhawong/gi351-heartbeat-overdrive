@@ -64,7 +64,13 @@ namespace HBO
         void Update()
         {
             if (bpmText != null && conductor != null && conductor.CurrentBpm > 0f)
-                bpmText.text = Mathf.RoundToInt(conductor.CurrentBpm) + " BPM";
+            {
+                string bpm = Mathf.RoundToInt(conductor.CurrentBpm) + " BPM";
+                bpmText.text = health != null && health.EnemyCount > 1
+                    ? string.Format("{0}  {1}/{2}   ·   {3}",
+                        health.CurrentEnemy.name, health.EnemyIndex + 1, health.EnemyCount, bpm)
+                    : bpm;
+            }
 
             if (judgementText != null && judgementTimer > 0f)
             {
@@ -112,13 +118,30 @@ namespace HBO
                 comboText.text = combo >= 2 ? combo + " COMBO" : "";
         }
 
-        public void ShowResult(bool playerWon)
+        /// <summary>ป้ายกลางจอตอนตีมอนสเตอร์ตัวหนึ่งตาย (ค้างนานกว่าป้ายตัดสินปกติ)</summary>
+        public void ShowEnemyDown(string enemyName)
+        {
+            if (judgementText == null) return;
+            judgementTimer = 1.1f;
+            judgementText.text = enemyName + " DOWN!";
+            judgementText.color = new Color(0.5f, 1f, 0.6f);
+        }
+
+        public void ShowResult(bool playerWon, BattleStats stats)
         {
             if (resultPanel != null) resultPanel.SetActive(true);
-            if (resultText != null)
-                resultText.text = playerWon
-                    ? "YOU WIN!\n\nPRESS SPACE TO RETRY"
-                    : "FLATLINE...\n\nPRESS SPACE TO RETRY";
+            if (resultText == null) return;
+
+            // ใช้ rich text ย่อบรรทัดสถิติ เพราะ Text ตัวนี้ตั้งไว้ 76pt สำหรับพาดหัว
+            int monsterTotal = health != null ? health.EnemyCount : stats.monstersDown;
+            resultText.text = string.Format(
+                "{0}\n<size=38>MONSTERS DOWN {1}/{2}\n" +
+                "<color=#FFD93B>PERFECT {3}</color>   <color=#66E5FF>GREAT {4}</color>   <color=#FF6B6B>MISS {5}</color>\n" +
+                "BEST COMBO {6}   ACCURACY {7:0}%   TIME {8:0.0}s</size>\n\n<size=40>PRESS SPACE TO RETRY</size>",
+                playerWon ? "YOU WIN!" : "FLATLINE...",
+                stats.monstersDown, monsterTotal,
+                stats.perfect, stats.great, stats.miss,
+                stats.bestCombo, stats.Accuracy * 100f, stats.seconds);
         }
     }
 }

@@ -21,6 +21,16 @@ namespace HBO
         public AudioClip winSfx;
         public AudioClip loseSfx;
 
+        [Header("ซิงก์เพลงกับจังหวะเกม")]
+        [Tooltip("BPM จริงของไฟล์ musicLoop — ต้องใส่ให้ตรง ไม่งั้นซิงก์ไม่ได้ (ปกติควรเท่ากับ baseBpm)")]
+        public float musicBpm = 90f;
+        [Tooltip("เร่ง/ลดความเร็วเพลงตาม BPM ของเกม (Climax Shift) เพื่อให้ล็อกจังหวะกันตลอด — แลกกับเสียงเพลงที่คีย์สูงขึ้น")]
+        public bool syncMusicPitch = false;
+        [Tooltip("เพดาน pitch กันเพลงเสียงแหลมจนเพี้ยน (1.15 ≈ สูงขึ้นราว 2 เสียง)")]
+        [Range(1f, 2f)] public float maxMusicPitch = 1.15f;
+        [Tooltip("เคาะเสียงบีตเบาๆ ซ้อนบนเพลงด้วย — ตัวชี้จังหวะที่ตรงเป๊ะเสมอแม้เพลงจะดริฟต์")]
+        public bool beatTickWithMusic = true;
+
         AudioSource musicSource;
         AudioSource sfxSource;
         AudioSource heartSource;
@@ -49,12 +59,21 @@ namespace HBO
         public void StartMusic()
         {
             musicOn = true;
-            if (musicLoop != null)
-            {
-                musicSource.clip = musicLoop;
-                musicSource.volume = 1f;
-                musicSource.Play();
-            }
+            if (musicLoop == null) return;
+
+            musicSource.clip = musicLoop;
+            musicSource.volume = 1f;
+            musicSource.pitch = 1f;
+            // PlayScheduled อิง dspTime เดียวกับ Conductor เพลงจึงเริ่มตรงบีตแรกเป๊ะ
+            // (Play() ธรรมดาจะเริ่มตอนต้นเฟรมถัดไป คลาดได้หลายสิบมิลลิวินาที)
+            musicSource.PlayScheduled(conductor.FirstBeatTime);
+        }
+
+        void Update()
+        {
+            if (!musicOn || musicLoop == null || !syncMusicPitch) return;
+            if (conductor == null || musicBpm <= 0f || conductor.CurrentBpm <= 0f) return;
+            musicSource.pitch = Mathf.Min(conductor.CurrentBpm / musicBpm, maxMusicPitch);
         }
 
         public void StopMusic(bool playerWon)
@@ -67,9 +86,12 @@ namespace HBO
         void HandleBeat(int beatIndex)
         {
             if (!musicOn) return;
-            // ยังไม่มีเพลงจริง: เคาะติ๊กตามบีตให้พอจับจังหวะได้ (เน้นทุกบีตที่ 4)
+            // เสียงเคาะบีตคือตัวชี้จังหวะที่ตรง 100% เสมอ ต่างจากเพลงที่อาจดริฟต์
+            // ไม่มีเพลง = เคาะดัง (เน้นบีตที่ 4), มีเพลงแล้ว = เคาะเบาๆ ซ้อนไว้เป็นไกด์
             if (musicLoop == null)
                 sfxSource.PlayOneShot(ProceduralAudio.Tick, beatIndex % 4 == 0 ? 0.8f : 0.45f);
+            else if (beatTickWithMusic)
+                sfxSource.PlayOneShot(ProceduralAudio.Tick, beatIndex % 4 == 0 ? 0.3f : 0.16f);
         }
 
         public void PlayPerfect() { sfxSource.PlayOneShot(perfectSfx, 1f); }

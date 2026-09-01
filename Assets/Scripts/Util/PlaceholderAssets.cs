@@ -9,6 +9,13 @@ namespace HBO
     /// </summary>
     public static class PlaceholderAssets
     {
+        static Sprite pulseRing;
+        /// <summary>วงแหวนของวง Pulse — สร้างครั้งเดียวแล้วใช้ซ้ำทุกวง (วงเกิดทุกบีต ห้ามสร้างใหม่ทุกครั้ง)</summary>
+        public static Sprite SharedPulseRing
+        {
+            get { if (pulseRing == null) pulseRing = Ring(256, 0.09f, Color.white); return pulseRing; }
+        }
+
         public static Sprite Circle(int size, Color color)
         {
             var tex = NewTex(size);

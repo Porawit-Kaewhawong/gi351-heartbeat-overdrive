@@ -24,7 +24,7 @@ namespace HBO
             this.targetScale = targetScale;
             sr = GetComponent<SpriteRenderer>();
             if (sr != null && sr.sprite == null)
-                sr.sprite = PlaceholderAssets.Ring(256, 0.09f, Color.white);
+                sr.sprite = PlaceholderAssets.SharedPulseRing;
             UpdateVisual();
         }
 
