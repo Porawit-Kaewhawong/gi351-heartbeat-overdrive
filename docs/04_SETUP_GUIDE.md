@@ -6,7 +6,7 @@
 (สร้างและต่อสายอัตโนมัติแล้วโดยเมนู Tools > Heartbeat Overdrive > Setup Main Scene)
 
 ```
-Conductor (นาฬิกา dspTime, คุม BPM ← Climax Shift)
+Conductor (นาฬิกา dspTime, คุม BPM ← Climax Shift อ่าน LineupFraction)
    │ OnBeat
    ▼
 PulseSpawner (ปล่อยวงทุก N บีต) ──► PulseRing (หดเข้าวงเป้า)
@@ -15,13 +15,14 @@ PulseSpawner (ปล่อยวงทุก N บีต) ──► PulseRing (�
 InputJudge (Space/คลิก → Perfect/Great/Miss)
    │ OnJudged
    ▼
-GameManager ──► HealthSystem (HP สองฝั่ง)
-   │                │ OnChanged / OnBattleEnded
+GameManager ──► HealthSystem (HP ผู้เล่น + ขบวนมอนสเตอร์)
+   │                │ OnChanged / OnEnemyDefeated / OnBattleEnded
    ├─► FeedbackDirector (shake + hitstop + SFX)
-   ├─► CharacterVisual (พุ่งตัว / กะพริบแดง)
-   └─► HUDController (หลอดเลือด คอมโบ ป้ายตัดสิน)
+   ├─► CharacterVisual (พุ่งตัว / กะพริบแดง / เฟดเข้า-ออกตอนสลับมอนสเตอร์)
+   └─► HUDController (หลอดเลือด คอมโบ ป้ายตัดสิน ตัวนับมอนสเตอร์ หน้าผลพร้อมสถิติ)
 
 RedlineEffect (อ่าน HP ผู้เล่นทุกเฟรม) ──► ขอบแดง + AudioDirector (หัวใจดัง/duck เพลง)
+   └─ subscribe OnBattleEnded เอง เพื่อดับชีพจรตอนจบการดวล
 ```
 
 หลักการสำคัญที่ห้ามเปลี่ยน:
@@ -30,8 +31,24 @@ RedlineEffect (อ่าน HP ผู้เล่นทุกเฟรม) ─�
    ห้ามใช้ Time.time ตัดสินจังหวะเด็ดขาด ไม่งั้นเพี้ยนตาม framerate/timeScale
 2. **ค่าบาลานซ์อยู่ใน GameConfig ที่เดียว** — จูนใน Inspector ได้ระหว่างกด Play
    (ค่าจะเด้งกลับตอนออก Play mode — จดค่าที่ชอบไว้แล้วค่อยใส่กลับ)
-3. ระบบคุยกันผ่าน event (OnBeat / OnJudged / OnChanged / OnBattleEnded)
+3. ระบบคุยกันผ่าน event (OnBeat / OnJudged / OnChanged / OnEnemyDefeated / OnBattleEnded)
    จะเพิ่มฟีเจอร์ใหม่ให้ subscribe event ไม่ต้องไปแก้ไส้ระบบเดิม
+
+## สถานะเกมและปุ่ม
+
+`GameManager.State` วนอยู่สี่สถานะ: `Ready → Playing → Won / Lost → (Retry โหลดซีนใหม่)`
+
+| ปุ่ม | ผล |
+|---|---|
+| Space / คลิกซ้าย | หน้า Ready = เริ่มดวล, ระหว่างดวล = ตีตามจังหวะ, หน้าผล = เล่นใหม่ |
+| R | เล่นใหม่ (เฉพาะหน้าผล) |
+| Esc | ออกจากเกม — ใน Editor จะหยุด Play mode ให้แทน |
+
+หน้าผลแสดงสถิติจาก struct `BattleStats` (Perfect/Great/Miss, คอมโบสูงสุด, ความแม่น,
+เวลา, จำนวนมอนสเตอร์ที่ล้ม) นับสะสมใน GameManager ระหว่างดวล เขียนลง `resultText`
+ตัวเดิมด้วย rich text จึงไม่ต้องเพิ่ม Text ใหม่ในซีน
+
+> หน้าผลกับปุ่ม Retry มี cooldown 0.8 วินาที กันกดรัวท้ายเกมแล้วเผลอเริ่มใหม่ทันที
 
 ## ตาราง GameConfig ที่จะได้จูนบ่อย
 
@@ -134,6 +151,11 @@ CharacterVisual มีเมธอด `Lunge()` กับ `FlashHurt()` เป�
 
 - ซีนถูกสร้างจากสคริปต์ — ถ้าซีนพัง/สายหลุด ให้รัน Setup Main Scene ใหม่ได้เสมอ
   แต่การแก้ซีนด้วยมือหลังจากนั้น (เช่น ใส่อาร์ต) จะหายถ้ารัน Setup ซ้ำ → ระวัง + commit บ่อย
+- ช่อง `Enemies` เพิ่งถูกเพิ่มหลังจากซีนถูกเซฟไปแล้ว **เปิด Unity ครั้งแรกให้เช็คว่ามีมอนสเตอร์
+  ครบ 3 ตัวจริง** ถ้าขึ้นมาว่าง กรอกใน Inspector หรือรัน Setup Main Scene ใหม่
+  (ถ้าปล่อยว่าง HealthSystem จะถอยไปใช้ศัตรูตัวเดียว 120 HP แบบเดิม ไม่พังแต่ได้เกมคนละแบบ)
+- สไปรต์ placeholder ของวง Pulse ถูก cache ไว้ตัวเดียวใน `PlaceholderAssets.SharedPulseRing`
+  อย่าเผลอเปลี่ยนกลับไปสร้างใหม่ทุกวง เพราะวงเกิดทุกบีต จะกระตุกตรงจังหวะและเท็กซ์เจอร์กองสะสม
 - Retry ใช้การโหลดซีนใหม่ทั้งซีน ถ้าเพิ่มของที่ต้องรอดข้ามรอบ (เช่น เก็บสถิติ) ต้องใช้ static หรือ DontDestroyOnLoad
 - ตอน build จริง: File > Build Profiles → ซีน Main ถูกใส่ใน Scene List ให้แล้วโดยสคริปต์ Setup
 - โปรเจกต์ใช้ **Input Manager เดิม** (Input.GetKeyDown) — อย่าเผลอสลับ Active Input Handling
