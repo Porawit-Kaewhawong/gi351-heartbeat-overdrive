@@ -19,8 +19,10 @@ namespace HBO
     {
         public string name = "MONSTER";
         public int maxHp = 55;
-        [Tooltip("เว้นว่าง = ใช้วงกลม placeholder (ถ้าใส่อาร์ตจริง ตั้งสีเป็นขาวไม่ให้ tint ทับ)")]
+        [Tooltip("ท่ายืน — เว้นว่าง = ใช้วงกลม placeholder (ถ้าใส่อาร์ตจริง ตั้งสีเป็นขาวไม่ให้ tint ทับ)")]
         public Sprite sprite;
+        [Tooltip("ท่าโจมตีของตัวนี้ ใส่ได้หลายใบ เวลาสวนกลับจะสุ่มมาหนึ่งใบ แล้วคืนท่ายืนเมื่อจบ")]
+        public Sprite[] attackSprites;
         public Color bodyColor = new Color(1f, 0.45f, 0.4f);
         [Tooltip("ขนาดตัวในซีน — ตัวท้ายขบวนควรใหญ่กว่าเพื่อให้ดูเป็นบอส")]
         public float scale = 1.8f;

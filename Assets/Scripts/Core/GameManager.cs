@@ -56,7 +56,7 @@ namespace HBO
         {
             if (enemyVisual == null) return;
             var def = health.CurrentEnemy;
-            enemyVisual.Apply(def.sprite, def.bodyColor, def.scale);
+            enemyVisual.Apply(def.sprite, def.attackSprites, def.bodyColor, def.scale);
         }
 
         void Update()
