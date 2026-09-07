@@ -53,6 +53,30 @@ namespace HBO
             return Mathf.Max(minBeatsPerPulse, beatsPerPulse - steps * beatsPerPulseStep);
         }
 
+        [Header("Timing Target (จุดกดจังหวะย้ายที่ได้)")]
+        [Tooltip("ให้จุดกดจังหวะเลื่อนไปมา แทนที่จะปักอยู่กลางจอตลอด")]
+        public bool targetRoams = true;
+        [Tooltip("ย้ายจุดกดทุกๆ กี่บีต")]
+        public int targetMoveEveryBeats = 8;
+        [Tooltip("ขอบเขตการย้าย (ครึ่งความกว้าง, ครึ่งความสูง) รอบจุดตั้งต้นในซีน")]
+        public Vector2 targetRoamArea = new Vector2(3.5f, 1.2f);
+        [Tooltip("ใช้เวลาเลื่อนไปจุดใหม่กี่วินาที — สั้นไปจะกระชากจนเล็งไม่ทัน")]
+        public float targetMoveDuration = 0.7f;
+
+        [Header("Overdrive (สะสมได้จาก Perfect เท่านั้น)")]
+        [Tooltip("Perfect หนึ่งครั้งเติมเกจกี่หน่วย (เกจเต็มที่ 100)")]
+        public float overdrivePerPerfect = 14f;
+        [Tooltip("Great เติมเกจเท่าไหร่ — ตั้ง 0 ไว้ Perfect จะได้เป็นทางเดียวที่เข้า Overdrive")]
+        public float overdrivePerGreat = 0f;
+        [Tooltip("Miss หักเกจเท่าไหร่")]
+        public float overdriveLossOnMiss = 30f;
+        [Tooltip("เกจเต็มแล้ว Overdrive อยู่ได้กี่บีต")]
+        public int overdriveBeats = 8;
+        [Tooltip("ระหว่าง Overdrive ดาเมจคูณเท่าไหร่")]
+        public float overdriveDamageMultiplier = 2f;
+        [Tooltip("ระหว่าง Overdrive กด Miss จะไม่โดนสวนกลับ แต่ Overdrive หลุดทันที")]
+        public bool overdriveBlocksCounter = true;
+
         [Header("Judgement Windows (วินาที)")]
         public float perfectWindow = 0.065f;
         public float greatWindow = 0.13f;

@@ -41,6 +41,13 @@ namespace HBO
             audioDirector.PlayMiss();
         }
 
+        /// <summary>ตอนเกจ Overdrive เต็ม — สั่นหนักกว่า Perfect ปกติให้รู้ว่าเข้าสถานะพิเศษแล้ว</summary>
+        public void OnOverdrive()
+        {
+            Shake(config.shakePerfect * 1.8f);
+            audioDirector.PlayPerfect();
+        }
+
         void Shake(float amount) { shakeAmp = Mathf.Max(shakeAmp, amount); }
 
         void HitStop(float duration)
