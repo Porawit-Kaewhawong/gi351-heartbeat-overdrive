@@ -7,8 +7,8 @@ namespace HBO
     /// ฟังบีตจาก Conductor แล้วปล่อยวง Pulse วิ่งเข้าวงเป้า
     /// เก็บลิสต์วงที่ยังไม่ถูกตัดสินให้ InputJudge ใช้
     ///
-    /// แบบ osu: **แต่ละโน้ตเกิดคนละตำแหน่ง** และวงเป้า (TargetRing) จะวิ่งไปจ่อโน้ตตัวถัดไป
-    /// ที่ต้องกด ผู้เล่นจึงต้องกวาดสายตาไปมาแทนที่จะจ้องจุดเดียวกลางจอ
+    /// วง Pulse ทุกวงเกาะวงเป้าไว้ (ร่วมศูนย์กลางเดียวกัน) และวงเป้าจะ **ย้ายที่หลังเล่นจบแต่ละโน้ต**
+    /// ผู้เล่นจึงต้องเลื่อนสายตาไปจุดใหม่ทุกครั้งที่กด แต่ยังตามแค่จุดเดียวไม่ต้องกวาดหาหลายจุด
     /// </summary>
     public class PulseSpawner : MonoBehaviour
     {
@@ -27,18 +27,17 @@ namespace HBO
         double nextSpawnBeat;
 
         TargetRing targetRing;
-        Vector3 roamHome;        // จุดตั้งต้นของวงเป้าในซีน ใช้เป็นศูนย์กลางของกรอบสุ่ม
-        Vector3 lastNotePos;     // ตำแหน่งของโน้ตที่ปล่อยไปล่าสุด
-        int pulseCount;
+        Vector3 roamHome;      // จุดตั้งต้นของวงเป้าในซีน ใช้เป็นศูนย์กลางของกรอบสุ่ม
+        int resolvedCount;     // จำนวนโน้ตที่เล่นจบไปแล้ว (กดโดนหรือหลุดก็นับ)
 
-        Vector3 focusFrom, focusTo;
-        float focusT = 1f;
+        Vector3 moveFrom, moveTo;
+        float moveT = 1f;
 
         void Awake()
         {
             if (target == null) return;
             roamHome = target.position;
-            lastNotePos = focusFrom = focusTo = roamHome;
+            moveFrom = moveTo = roamHome;
             targetRing = target.GetComponent<TargetRing>();
         }
 
@@ -47,8 +46,7 @@ namespace HBO
             if (spawning) return;
             spawning = true;
             nextSpawnBeat = conductor.NextBeatIndex;
-            pulseCount = 0;
-            lastNotePos = roamHome;
+            resolvedCount = 0;
             conductor.OnBeat += HandleBeat;
         }
 
@@ -85,16 +83,14 @@ namespace HBO
             // เล็งเป็น "หมายเลขบีต" ไม่ใช่เวลา วงจะได้ลงตรงบีตจริงเสมอ
             int targetBeat = beatIndex + Mathf.Max(1, Mathf.RoundToInt(config.approachBeats));
 
-            Vector3 pos = PickNotePosition();
-            pulseCount++;
-
             var go = new GameObject("PulseRing");
+            go.transform.position = target != null ? target.position : Vector3.zero;
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = ringSprite != null ? ringSprite : PlaceholderAssets.SharedPulseRing;
             sr.color = ringColor;
             sr.sortingOrder = 10;
             var ring = go.AddComponent<PulseRing>();
-            ring.Init(conductor, pos, spawnTime, targetBeat, TargetScale());
+            ring.Init(conductor, target, spawnTime, targetBeat, TargetScale());
             Active.Add(ring);
         }
 
@@ -106,60 +102,49 @@ namespace HBO
         }
 
         /// <summary>
-        /// เลือกตำแหน่งให้โน้ตตัวถัดไป — ย้ายทุกๆ targetMoveEveryPulses โน้ต
-        /// สุ่มใหม่จนกว่าจะห่างจากโน้ตก่อนหน้าเกิน targetMinMoveDistance
-        /// ไม่งั้นบางรอบจะได้จุดที่แทบทับของเดิมจนดูเหมือนไม่ขยับ
+        /// ย้ายวงเป้าไปจุดสุ่มใหม่ เรียกหลังเล่นจบแต่ละโน้ต (ทุกๆ targetMoveEveryPulses โน้ต)
+        ///
+        /// ย้าย "หลังโน้ตจบ" ไม่ใช่ "ก่อนโน้ตลง" โดยตั้งใจ — โน้ตถัดไปยังเหลืออีกหลายบีตกว่าจะถึงเป้า
+        /// วงเป้าจึงเลื่อนไปนิ่งรออยู่ก่อนแล้ว ไม่ไปขยับตอนผู้เล่นกำลังจะกดพอดี
+        /// สุ่มใหม่จนกว่าจะห่างจากจุดเดิมเกิน targetMinMoveDistance ไม่งั้นบางรอบจะเหมือนไม่ขยับ
         /// </summary>
-        Vector3 PickNotePosition()
+        void MoveTargetAfterNote()
         {
-            if (!config.targetRoams) return roamHome;
+            if (target == null || !config.targetRoams) return;
 
             int every = Mathf.Max(1, config.targetMoveEveryPulses);
-            if (pulseCount % every != 0) return lastNotePos;
+            if (resolvedCount % every != 0) return;
 
             var area = config.targetRoamArea;
-            Vector3 pick = lastNotePos;
+            Vector3 pick = moveTo;
             for (int i = 0; i < 8; i++)
             {
                 pick = roamHome + new Vector3(
                     Random.Range(-area.x, area.x), Random.Range(-area.y, area.y), 0f);
-                if (Vector3.Distance(pick, lastNotePos) >= config.targetMinMoveDistance) break;
+                if (Vector3.Distance(pick, target.position) >= config.targetMinMoveDistance) break;
             }
 
-            lastNotePos = pick;
-            return pick;
-        }
-
-        /// <summary>โน้ตตัวถัดไปที่ต้องกด — วงเป้าจะวิ่งไปจ่อจุดนี้</summary>
-        Vector3 NextNoteFocus()
-        {
-            for (int i = 0; i < Active.Count; i++)
-                if (Active[i] != null && !Active[i].Consumed) return Active[i].transform.position;
-            return roamHome; // ไม่มีวงในสนาม กลับไปรอที่จุดตั้งต้น
+            moveFrom = target.position;
+            moveTo = pick;
+            moveT = 0f;
         }
 
         void Update()
         {
-            if (target == null) return;
-
-            Vector3 want = NextNoteFocus();
-            if ((want - focusTo).sqrMagnitude > 0.0001f)
-            {
-                focusFrom = target.position;
-                focusTo = want;
-                focusT = 0f;
-            }
-
-            if (focusT >= 1f) return;
-            focusT = Mathf.Min(1f, focusT + Time.unscaledDeltaTime / Mathf.Max(0.02f, config.targetMoveDuration));
-            float e = focusT * focusT * (3f - 2f * focusT); // smoothstep เข้า-ออกนุ่ม
-            target.position = Vector3.Lerp(focusFrom, focusTo, e);
+            if (target == null || moveT >= 1f) return;
+            moveT = Mathf.Min(1f, moveT + Time.unscaledDeltaTime / Mathf.Max(0.02f, config.targetMoveDuration));
+            float e = moveT * moveT * (3f - 2f * moveT); // smoothstep เข้า-ออกนุ่ม
+            target.position = Vector3.Lerp(moveFrom, moveTo, e);
         }
 
+        /// <summary>เรียกเมื่อโน้ตหนึ่งตัวเล่นจบ ไม่ว่าจะกดโดนหรือหลุดเวลา — เป็นจังหวะที่วงเป้าย้ายที่</summary>
         public void Remove(PulseRing ring)
         {
             Active.Remove(ring);
             if (ring != null) Destroy(ring.gameObject);
+
+            resolvedCount++;
+            MoveTargetAfterNote();
         }
 
         public void ClearAll()
