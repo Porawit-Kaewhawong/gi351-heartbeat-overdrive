@@ -10,8 +10,10 @@ namespace HBO
     {
         public string name = "MONSTER";
         public int maxHp = 55;
-        [Tooltip("เว้นว่าง = ใช้วงกลม placeholder (ถ้าใส่อาร์ตจริง ตั้งสีเป็นขาวไม่ให้ tint ทับ)")]
+        [Tooltip("ท่ายืน — เว้นว่าง = ใช้วงกลม placeholder (ถ้าใส่อาร์ตจริง ตั้งสีเป็นขาวไม่ให้ tint ทับ)")]
         public Sprite sprite;
+        [Tooltip("ท่าโจมตีของตัวนี้ ใส่ได้หลายใบ เวลาสวนกลับจะสุ่มมาหนึ่งใบ แล้วคืนท่ายืนเมื่อจบ")]
+        public Sprite[] attackSprites;
         public Color bodyColor = new Color(1f, 0.45f, 0.4f);
         [Tooltip("ขนาดตัวในซีน — ตัวท้ายขบวนควรใหญ่กว่าเพื่อให้ดูเป็นบอส")]
         public float scale = 1.8f;
@@ -22,15 +24,58 @@ namespace HBO
     /// </summary>
     public class GameConfig : MonoBehaviour
     {
-        [Header("Tempo (Climax Shift)")]
-        [Tooltip("BPM เริ่มต้นของการดวล")]
+        [Header("Climax Shift (วงถี่ขึ้นเมื่อขบวนศัตรูใกล้ล้ม)")]
+        [Tooltip("BPM ของการดวล — คงที่ตลอดเกมโดยตั้งใจ เพลงจึงไม่มีวันหลุดจังหวะ\n" +
+                 "ความกดดันมาจากความถี่ของวง ไม่ใช่ความเร็วของบีต")]
         public float baseBpm = 90f;
-        [Tooltip("BPM ที่บวกเพิ่มสูงสุดเมื่อ HP ศัตรูใกล้หมด (Climax Shift)")]
-        public float maxBpmBonus = 60f;
-        [Tooltip("ปล่อยวง Pulse ทุกๆ กี่บีต")]
-        public int beatsPerPulse = 2;
-        [Tooltip("วง Pulse ใช้เวลาวิ่งเข้าเป้ากี่บีต (ยิ่ง BPM สูง ยิ่งวิ่งเร็ว)")]
+        [Tooltip("ตัวตั้ง: ตอนเริ่มเกมปล่อยวง Pulse ทุกๆ กี่บีต")]
+        public float beatsPerPulse = 2f;
+        [Tooltip("เลือดศัตรูลดไปทุกๆ กี่ส่วน ถึงจะเร่งหนึ่งขั้น (0.25 = ทุก 25%)")]
+        [Range(0.05f, 1f)] public float climaxStepFraction = 0.25f;
+        [Tooltip("เร่งหนึ่งขั้น = ลด beatsPerPulse ลงเท่าไหร่")]
+        public float beatsPerPulseStep = 0.25f;
+        [Tooltip("พื้น: beatsPerPulse ลงได้ต่ำสุดเท่านี้ (1 = ปล่อยวงทุกบีต)")]
+        public float minBeatsPerPulse = 1f;
+        [Tooltip("วง Pulse ใช้เวลาวิ่งเข้าเป้ากี่บีต (มากขึ้น = อ่านง่ายขึ้น)")]
         public float approachBeats = 3f;
+
+        /// <summary>
+        /// ปล่อยวง Pulse ทุกกี่บีต ณ ความคืบหน้าของขบวนนี้ (lineupFraction: 1 = ยังไม่โดนเลย, 0 = ล้มหมด)
+        ///
+        /// ไล่เป็นขั้นบันได: เลือดลดครบทุก climaxStepFraction ก็ลด beatsPerPulse ลง beatsPerPulseStep
+        /// ค่าเริ่มต้น = ทุก 25% ลด 0.25 → 2.00 / 1.75 / 1.50 / 1.25 (ขั้นสุดท้ายคือตอนเลือดหมดพอดี)
+        /// BPM ไม่ขยับเลยตลอดกระบวนการนี้ เพลงจึงล็อกกับเกมได้ 100%
+        /// </summary>
+        public float BeatsPerPulseAt(float lineupFraction)
+        {
+            float lost = 1f - Mathf.Clamp01(lineupFraction);
+            int steps = climaxStepFraction > 0f ? Mathf.FloorToInt(lost / climaxStepFraction) : 0;
+            return Mathf.Max(minBeatsPerPulse, beatsPerPulse - steps * beatsPerPulseStep);
+        }
+
+        [Header("Timing Target (จุดกดจังหวะย้ายที่ได้)")]
+        [Tooltip("ให้จุดกดจังหวะเลื่อนไปมา แทนที่จะปักอยู่กลางจอตลอด")]
+        public bool targetRoams = true;
+        [Tooltip("ย้ายจุดกดทุกๆ กี่บีต")]
+        public int targetMoveEveryBeats = 8;
+        [Tooltip("ขอบเขตการย้าย (ครึ่งความกว้าง, ครึ่งความสูง) รอบจุดตั้งต้นในซีน")]
+        public Vector2 targetRoamArea = new Vector2(3.5f, 1.2f);
+        [Tooltip("ใช้เวลาเลื่อนไปจุดใหม่กี่วินาที — สั้นไปจะกระชากจนเล็งไม่ทัน")]
+        public float targetMoveDuration = 0.7f;
+
+        [Header("Overdrive (สะสมได้จาก Perfect เท่านั้น)")]
+        [Tooltip("Perfect หนึ่งครั้งเติมเกจกี่หน่วย (เกจเต็มที่ 100)")]
+        public float overdrivePerPerfect = 14f;
+        [Tooltip("Great เติมเกจเท่าไหร่ — ตั้ง 0 ไว้ Perfect จะได้เป็นทางเดียวที่เข้า Overdrive")]
+        public float overdrivePerGreat = 0f;
+        [Tooltip("Miss หักเกจเท่าไหร่")]
+        public float overdriveLossOnMiss = 30f;
+        [Tooltip("เกจเต็มแล้ว Overdrive อยู่ได้กี่บีต")]
+        public int overdriveBeats = 8;
+        [Tooltip("ระหว่าง Overdrive ดาเมจคูณเท่าไหร่")]
+        public float overdriveDamageMultiplier = 2f;
+        [Tooltip("ระหว่าง Overdrive กด Miss จะไม่โดนสวนกลับ แต่ Overdrive หลุดทันที")]
+        public bool overdriveBlocksCounter = true;
 
         [Header("Judgement Windows (วินาที)")]
         public float perfectWindow = 0.065f;

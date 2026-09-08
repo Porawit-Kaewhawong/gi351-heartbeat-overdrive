@@ -3,7 +3,7 @@ using UnityEngine;
 namespace HBO
 {
     /// <summary>
-    /// สร้างสไปรต์ placeholder ตอนรัน (วงกลม / วงแหวน / ขอบจอแดง)
+    /// สร้างสไปรต์ placeholder ตอนรัน (วงกลม / วงแหวน / ขอบจอแดง / ฉากหลัง)
     /// ทีมอาร์ตแทนที่ด้วยไฟล์จริงได้ทุกจุด: แค่ลากสไปรต์ใส่ช่องใน Inspector
     /// สคริปต์จะใช้ placeholder เฉพาะเมื่อช่องสไปรต์ว่างเท่านั้น
     /// </summary>
@@ -14,6 +14,13 @@ namespace HBO
         public static Sprite SharedPulseRing
         {
             get { if (pulseRing == null) pulseRing = Ring(256, 0.09f, Color.white); return pulseRing; }
+        }
+
+        static Sprite glow;
+        /// <summary>แสงฟุ้งกลมๆ ไล่จากกลางออกขอบ — ใช้เป็นแสงหลังจุดกดจังหวะและเอฟเฟกต์ Perfect</summary>
+        public static Sprite SharedGlow
+        {
+            get { if (glow == null) glow = RadialGlow(256); return glow; }
         }
 
         public static Sprite Circle(int size, Color color)
@@ -64,6 +71,40 @@ namespace HBO
                 float a = Mathf.Clamp01((d - 0.55f) / 0.65f);
                 a = a * a; // ไล่แบบนุ่ม
                 px[y * size + x] = new Color(1f, 1f, 1f, a);
+            }
+            return Finish(tex, px, size);
+        }
+
+        /// <summary>ตรงข้ามกับ Vignette: กลางสว่างทึบ ไล่จางออกขอบ</summary>
+        public static Sprite RadialGlow(int size)
+        {
+            var tex = NewTex(size);
+            Vector2 c = new Vector2(size * 0.5f, size * 0.5f);
+            float maxD = size * 0.5f;
+            var px = new Color[size * size];
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float d = Mathf.Clamp01(Vector2.Distance(new Vector2(x, y), c) / maxD);
+                float a = 1f - d;
+                a = a * a; // ไล่แบบนุ่ม ไม่ให้เห็นขอบวง
+                px[y * size + x] = new Color(1f, 1f, 1f, a);
+            }
+            return Finish(tex, px, size);
+        }
+
+        /// <summary>
+        /// ฉากหลังไล่สีบนลงล่าง — ต้องเป็นสี่เหลี่ยมจัตุรัส เพราะ pixelsPerUnit มีค่าเดียว
+        /// ถ้าทำเป็นแถบผอม (เช่น 2xN) สไปรต์จะกว้างแค่เศษ unit แล้วสเกลให้เต็มจอไม่ได้
+        /// </summary>
+        public static Sprite VerticalGradient(int size, Color top, Color bottom)
+        {
+            var tex = NewTex(size);
+            var px = new Color[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                Color c = Color.Lerp(bottom, top, size > 1 ? (float)y / (size - 1) : 0f);
+                for (int x = 0; x < size; x++) px[y * size + x] = c;
             }
             return Finish(tex, px, size);
         }

@@ -26,6 +26,22 @@ namespace HBO
             active = true;
             // กินอินพุตเฟรมเดียวกับปุ่มเริ่มเกม จะได้ไม่โดนตัดสินเป็น Miss ทันที
             lastInputTime = Conductor.Now;
+            DiscardUnreachableRings();
+        }
+
+        /// <summary>
+        /// ทิ้งวงที่ผ่านไปแล้วหรือใกล้เกินจนกดไม่ทัน ณ วินาทีที่เพิ่งเปิดตัดสิน — ทิ้งเงียบๆ ไม่นับ Miss
+        /// เพราะช่วงที่ปิดตัดสินอยู่ (สลับมอนสเตอร์) ผู้เล่นกดอะไรไม่ได้อยู่แล้ว จะลงโทษไม่ได้
+        /// </summary>
+        void DiscardUnreachableRings()
+        {
+            double cutoff = Conductor.Now + config.greatWindow;
+            for (int i = spawner.Active.Count - 1; i >= 0; i--)
+            {
+                var r = spawner.Active[i];
+                if (r == null) { spawner.Active.RemoveAt(i); continue; }
+                if (r.HitTime < cutoff) spawner.Remove(r);
+            }
         }
 
         public void Deactivate() { active = false; }

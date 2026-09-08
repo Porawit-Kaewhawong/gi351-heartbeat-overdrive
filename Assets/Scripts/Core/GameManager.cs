@@ -9,7 +9,7 @@ namespace HBO
     /// <summary>สรุปผลการดวลหนึ่งรอบ ใช้แสดงบนหน้า Result</summary>
     public struct BattleStats
     {
-        public int perfect, great, miss, bestCombo, monstersDown;
+        public int perfect, great, miss, bestCombo, monstersDown, guarded;
         public float seconds;
 
         public int Total => perfect + great + miss;
@@ -40,6 +40,58 @@ namespace HBO
         BattleStats stats;
         float battleStartedAt;
 
+        // ---------- Overdrive: กลไกที่ Perfect เท่านั้นเข้าถึงได้ ----------
+        float overdriveMeter;      // 0-100
+        int overdriveBeatsLeft;
+
+        public bool InOverdrive => overdriveBeatsLeft > 0;
+        /// <summary>ค่าที่เอาไปวาดหลอด: ตอนสะสมคือเกจ ตอนใช้งานคือเวลาที่เหลือ</summary>
+        public float OverdriveFraction => InOverdrive
+            ? (float)overdriveBeatsLeft / Mathf.Max(1, config.overdriveBeats)
+            : Mathf.Clamp01(overdriveMeter / 100f);
+
+        /// <summary>Overdrive คูณดาเมจ — เป็นเหตุผลหลักที่ Perfect ต่างจาก Great</summary>
+        int Scaled(int damage)
+        {
+            if (!InOverdrive) return damage;
+            return Mathf.Max(1, Mathf.RoundToInt(damage * config.overdriveDamageMultiplier));
+        }
+
+        void AddOverdrive(float amount)
+        {
+            if (InOverdrive || amount <= 0f) return;   // ระหว่างใช้งานอยู่ไม่สะสมเพิ่ม
+            overdriveMeter = Mathf.Clamp(overdriveMeter + amount, 0f, 100f);
+            if (overdriveMeter >= 100f) EnterOverdrive();
+        }
+
+        void EnterOverdrive()
+        {
+            overdriveBeatsLeft = Mathf.Max(1, config.overdriveBeats);
+            overdriveMeter = 100f;
+            feedback.OnOverdrive();
+            hud.ShowOverdriveStart();
+            HitBurst.Spawn(TargetPos(), new Color(1f, 0.4f, 0.35f, 0.95f), 1.2f, 6f, 0.5f);
+        }
+
+        void BreakOverdrive()
+        {
+            overdriveBeatsLeft = 0;
+            overdriveMeter = 0f;
+        }
+
+        /// <summary>Overdrive นับถอยหลังเป็นบีต ไม่ใช่วินาที จะได้อยู่ในกริดจังหวะเดียวกับเกม</summary>
+        void HandleBeat(int beatIndex)
+        {
+            if (overdriveBeatsLeft <= 0) return;
+            overdriveBeatsLeft--;
+            if (overdriveBeatsLeft <= 0) overdriveMeter = 0f;
+        }
+
+        Vector3 TargetPos()
+        {
+            return spawner != null && spawner.target != null ? spawner.target.position : Vector3.zero;
+        }
+
         void Start()
         {
             health.ResetAll();
@@ -48,7 +100,12 @@ namespace HBO
             judge.OnJudged += HandleJudgement;
             health.OnEnemyDefeated += HandleEnemyDefeated;
             health.OnBattleEnded += HandleBattleEnd;
+            if (conductor != null) conductor.OnBeat += HandleBeat;
             stateChangedAt = Time.unscaledTime;
+
+            // ฉากหลังสร้างจากโค้ด ไม่ต้องมีอยู่ในซีนก่อน (ทีมอาร์ตแทนด้วยภาพจริงได้ทีหลัง)
+            Backdrop.Create(feedback != null ? feedback.targetCamera : Camera.main,
+                conductor, spawner != null ? spawner.target : null);
         }
 
         /// <summary>ยัดหน้าตาของมอนสเตอร์ตัวปัจจุบันลง CharacterVisual ฝั่งศัตรู</summary>
@@ -56,12 +113,14 @@ namespace HBO
         {
             if (enemyVisual == null) return;
             var def = health.CurrentEnemy;
-            enemyVisual.Apply(def.sprite, def.bodyColor, def.scale);
+            enemyVisual.Apply(def.sprite, def.attackSprites, def.bodyColor, def.scale);
         }
 
         void Update()
         {
             if (Input.GetKeyDown(KeyCode.Escape)) { Quit(); return; }
+
+            hud.SetOverdrive(OverdriveFraction, InOverdrive);
 
             bool pressed = Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0);
 
@@ -85,6 +144,8 @@ namespace HBO
             battleStartedAt = Time.unscaledTime;
             perfectCombo = 0;
             stats = new BattleStats();
+            overdriveMeter = 0f;
+            overdriveBeatsLeft = 0;
             hud.ShowBattle();
             conductor.StartConducting();
             spawner.Begin();
@@ -104,35 +165,55 @@ namespace HBO
                     stats.perfect++;
                     if (perfectCombo > stats.bestCombo) stats.bestCombo = perfectCombo;
                     int bonus = Mathf.Min(perfectCombo / config.comboBonusEvery, config.comboBonusCap);
-                    health.DamageEnemy(config.perfectDamage + bonus);
+                    health.DamageEnemy(Scaled(config.perfectDamage + bonus));
                     feedback.OnPerfect();
+                    // เอฟเฟกต์ระเบิดวงเฉพาะ Perfect — Great ไม่มี ให้แยกออกจากกันด้วยตา
+                    HitBurst.Spawn(TargetPos(),
+                        InOverdrive ? new Color(1f, 0.45f, 0.35f, 0.95f) : new Color(1f, 0.85f, 0.2f, 0.9f),
+                        1.1f, InOverdrive ? 4.2f : 3.2f, 0.34f);
+                    AddOverdrive(config.overdrivePerPerfect);
                     if (enemyVisual != null) enemyVisual.FlashHurt();
-                    if (playerVisual != null) playerVisual.Lunge();
+                    if (playerVisual != null) playerVisual.PlayAttack();
                     break;
                 }
                 case Judgement.Great:
                     perfectCombo = 0;
                     stats.great++;
-                    health.DamageEnemy(config.greatDamage);
+                    health.DamageEnemy(Scaled(config.greatDamage));
                     feedback.OnGreat();
+                    AddOverdrive(config.overdrivePerGreat);
                     if (enemyVisual != null) enemyVisual.FlashHurt();
-                    if (playerVisual != null) playerVisual.Lunge();
+                    if (playerVisual != null) playerVisual.PlayAttack();
                     break;
                 default: // Miss: ผู้เล่นชะงัก + ศัตรูสวนกลับทันที
                     perfectCombo = 0;
                     stats.miss++;
+                    if (InOverdrive && config.overdriveBlocksCounter)
+                    {
+                        // Overdrive กันการสวนกลับได้หนึ่งครั้ง แลกกับการหลุดสถานะทันที
+                        stats.guarded++;
+                        BreakOverdrive();
+                        feedback.OnGreat();
+                        hud.ShowGuard();
+                        return;
+                    }
+                    overdriveMeter = Mathf.Max(0f, overdriveMeter - config.overdriveLossOnMiss);
                     health.DamagePlayer(config.enemyCounterDamage);
                     feedback.OnMiss();
                     if (playerVisual != null) playerVisual.FlashHurt();
-                    if (enemyVisual != null) enemyVisual.Lunge();
+                    if (enemyVisual != null) enemyVisual.PlayAttack();
                     break;
             }
             hud.ShowJudgement(j, perfectCombo);
         }
 
         /// <summary>
-        /// มอนสเตอร์ตัวหนึ่งตายแต่ยังเหลือตัวถัดไป: หยุดปล่อยวงชั่วคราว เฟดตัวเก่าออก เฟดตัวใหม่เข้า
-        /// ต้องเคลียร์วงที่ค้างในสนามด้วย ไม่งั้นวงพวกนั้นจะกลายเป็น Miss ฟรีระหว่างที่ผู้เล่นกดอะไรไม่ได้
+        /// มอนสเตอร์ตัวหนึ่งตายแต่ยังเหลือตัวถัดไป: เฟดตัวเก่าออก เฟดตัวใหม่เข้า
+        ///
+        /// สำคัญ: **ห้ามหยุด PulseSpawner ตรงนี้** วง Pulse ต้องไหลตามบีตต่อเนื่องตลอดการสลับตัว
+        /// ไม่งั้นผู้เล่นจะไม่มีตัวจับจังหวะทางสายตาเลยเกือบวินาที เหลือแต่เพลง พอวงกลับมา
+        /// ก็จะรู้สึกว่าเพลงกับเกมไม่ตรงกัน (แถมยังต้องรออีก approachBeats บีตกว่าวงแรกจะถึงเป้า)
+        /// ปิดแค่ InputJudge พอ แล้วตอน Activate() มันจะทิ้งวงที่เลยเวลาไปให้เองโดยไม่นับ Miss
         /// </summary>
         void HandleEnemyDefeated(int index)
         {
@@ -143,7 +224,6 @@ namespace HBO
         IEnumerator SwapEnemyRoutine()
         {
             judge.Deactivate();
-            spawner.End();
             hud.ShowEnemyDown(health.CurrentEnemy.name);
 
             if (enemyVisual != null) yield return enemyVisual.FadeOutRoutine(config.enemyFadeOutTime);
@@ -156,7 +236,6 @@ namespace HBO
 
             if (State != GameState.Playing) yield break;
             judge.Activate();
-            spawner.Begin();
         }
 
         void HandleBattleEnd(bool playerWon)

@@ -4,37 +4,83 @@ using UnityEngine;
 namespace HBO
 {
     /// <summary>
-    /// วิชวลตัวละครแบบง่าย: กะพริบแดงตอนโดนตี พุ่งตัวตอนโจมตี
-    /// ตอนนี้เป็นวงกลม placeholder — ทีมอาร์ตลากสไปรต์จริงใส่ SpriteRenderer ได้เลย
-    /// (ภายหลังเปลี่ยนไปใช้ Animator ได้โดยเรียกเมธอดเดิมสองตัวนี้)
+    /// วิชวลตัวละคร: ท่ายืน + สุ่มท่าโจมตี, กะพริบแดงตอนโดนตี, เฟดเข้า-ออกตอนสลับมอนสเตอร์
+    /// ตัวละคร **ไม่ขยับตำแหน่ง** เลย ยืนอยู่กับที่แล้วสื่อการโจมตีด้วยการสลับสไปรต์อย่างเดียว
+    /// สไปรต์ทั้งหมดใส่ที่คอมโพเนนต์นี้ที่เดียว ไม่ต้องไปยุ่งกับ SpriteRenderer
+    /// (ภายหลังเปลี่ยนไปใช้ Animator ได้โดยแก้ไส้ใน PlayAttack()/FlashHurt())
     /// </summary>
     public class CharacterVisual : MonoBehaviour
     {
+        [Header("สไปรต์")]
+        [Tooltip("ท่ายืนปกติ — ท่าที่ตัวละครกลับมาหาเสมอหลังโจมตีจบ\n" +
+                 "เว้นว่าง = ใช้สไปรต์ที่อยู่ใน SpriteRenderer อยู่แล้ว หรือวงกลม placeholder")]
+        public Sprite idleSprite;
+        [Tooltip("สไปรต์ท่าโจมตี — ตอนตีจะสุ่มมาหนึ่งใบใส่แทนท่ายืน แล้วคืนท่ายืนเมื่อจบ\n" +
+                 "เว้นว่าง = ไม่มีอนิเมชันโจมตี (ตัวละครยืนนิ่ง)")]
+        public Sprite[] attackSprites;
+        [Tooltip("ค้างท่าโจมตีไว้กี่วินาที (สั้นกว่านี้จะเห็นไม่ทัน)")]
+        public float attackPoseTime = 0.18f;
+
+        [Header("อื่นๆ")]
+        [Tooltip("สีที่ tint ทับสไปรต์ — ใช้อาร์ตจริงให้ตั้งเป็นขาวไม่ให้เพี้ยน")]
         public Color bodyColor = Color.white;
-        [Tooltip("ทิศที่พุ่งเข้าหาอีกฝ่าย: ผู้เล่น = +1, ศัตรู = -1")]
-        public float lungeDirection = 1f;
 
         SpriteRenderer sr;
-        Vector3 home;
         Coroutine co;
+        /// <summary>ท่ายืนที่ authoring ไว้ตั้งแต่แรก ใช้เป็นตัวสำรองเวลามอนสเตอร์ตัวใหม่ไม่มีอาร์ต</summary>
+        Sprite baseSprite;
+        int lastAttackIndex = -1;
 
         void Awake()
         {
             sr = GetComponent<SpriteRenderer>();
             if (sr == null) sr = gameObject.AddComponent<SpriteRenderer>();
-            if (sr.sprite == null) sr.sprite = PlaceholderAssets.Circle(256, Color.white);
+
+            // ลำดับความสำคัญ: ช่อง Idle Sprite > สไปรต์ที่ค้างอยู่ใน SpriteRenderer > วงกลม placeholder
+            if (idleSprite == null)
+                idleSprite = sr.sprite != null ? sr.sprite : PlaceholderAssets.Circle(256, Color.white);
+            sr.sprite = idleSprite;
+
+            baseSprite = idleSprite;
             sr.color = bodyColor;
-            home = transform.localPosition;
         }
 
-        public void Lunge() { Play(LungeCo()); }
+        public void PlayAttack() { Play(AttackCo()); }
         public void FlashHurt() { Play(HurtCo()); }
 
-        /// <summary>เปลี่ยนหน้าตาเป็นมอนสเตอร์ตัวใหม่ โดยคงความโปร่งใสปัจจุบันไว้ (จะได้เฟดเข้าต่อได้)</summary>
-        public void Apply(Sprite sprite, Color color, float scale)
+        /// <summary>
+        /// สุ่มท่าโจมตีหนึ่งใบ เลี่ยงไม่ให้ซ้ำท่าเดิมติดกันเพื่อไม่ให้ดูเป็นลูป
+        /// คืน null ถ้ายังไม่มีอาร์ตท่าโจมตี (ผู้เรียกจะข้ามการสลับสไปรต์ไป)
+        /// </summary>
+        Sprite PickAttackSprite()
+        {
+            if (attackSprites == null || attackSprites.Length == 0) return null;
+            if (attackSprites.Length == 1) return attackSprites[0];
+
+            int i = Random.Range(0, attackSprites.Length);
+            if (i == lastAttackIndex) i = (i + 1) % attackSprites.Length;
+            lastAttackIndex = i;
+            return attackSprites[i];
+        }
+
+        void RestoreIdle()
+        {
+            if (sr != null && idleSprite != null) sr.sprite = idleSprite;
+        }
+
+        /// <summary>
+        /// เปลี่ยนหน้าตาเป็นมอนสเตอร์ตัวใหม่ โดยคงความโปร่งใสปัจจุบันไว้ (จะได้เฟดเข้าต่อได้)
+        /// ท่ายืนและท่าโจมตีถูกเซ็ตทับทุกครั้ง เพราะแต่ละตัวมีอาร์ตของตัวเอง — ตัวที่ยังไม่มีอาร์ต
+        /// ต้องถอยไปใช้ท่าตั้งต้นของ GameObject ไม่ใช่ไปหยิบท่าของมอนสเตอร์ตัวก่อนหน้ามาใช้
+        /// </summary>
+        public void Apply(Sprite sprite, Sprite[] attacks, Color color, float scale)
         {
             if (sr == null) sr = GetComponent<SpriteRenderer>();
-            if (sprite != null) sr.sprite = sprite;
+            idleSprite = sprite != null ? sprite : baseSprite;
+            sr.sprite = idleSprite;
+            attackSprites = attacks;
+            lastAttackIndex = -1;
+
             float alpha = sr.color.a;
             bodyColor = color;
             var c = color; c.a = color.a * alpha;
@@ -48,7 +94,7 @@ namespace HBO
         IEnumerator FadeCo(float from, float to, float duration)
         {
             if (co != null) { StopCoroutine(co); co = null; }
-            transform.localPosition = home;
+            RestoreIdle();
             // ใช้ unscaled เพราะ hit freeze อาจยังค้าง timeScale อยู่ตอนตัวสุดท้ายตาย
             for (float t = 0f; t < duration; t += Time.unscaledDeltaTime)
             {
@@ -67,21 +113,20 @@ namespace HBO
         void Play(IEnumerator routine)
         {
             if (co != null) StopCoroutine(co);
-            transform.localPosition = home;
             sr.color = bodyColor;
+            // ตัดจบท่าโจมตีที่ค้างอยู่ ไม่งั้นถ้าโดนตีสวนกลางท่า สไปรต์จะค้างเป็นท่าโจมตีถาวร
+            RestoreIdle();
             co = StartCoroutine(routine);
         }
 
-        IEnumerator LungeCo()
+        IEnumerator AttackCo()
         {
-            const float d = 0.14f;
-            for (float t = 0; t < d; t += Time.deltaTime)
-            {
-                float k = Mathf.Sin(t / d * Mathf.PI);
-                transform.localPosition = home + Vector3.right * (lungeDirection * k * 0.6f);
-                yield return null;
-            }
-            transform.localPosition = home;
+            Sprite pose = PickAttackSprite();
+            if (pose == null) yield break;   // ไม่มีอาร์ตท่าโจมตี ก็ไม่ต้องทำอะไร ตัวละครยืนนิ่ง
+
+            sr.sprite = pose;
+            yield return new WaitForSeconds(Mathf.Max(0.02f, attackPoseTime));
+            RestoreIdle();
         }
 
         IEnumerator HurtCo()

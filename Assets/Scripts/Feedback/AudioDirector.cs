@@ -22,13 +22,13 @@ namespace HBO
         public AudioClip loseSfx;
 
         [Header("ซิงก์เพลงกับจังหวะเกม")]
-        [Tooltip("BPM จริงของไฟล์ musicLoop — ต้องใส่ให้ตรง ไม่งั้นซิงก์ไม่ได้ (ปกติควรเท่ากับ baseBpm)")]
+        [Tooltip("BPM จริงของไฟล์ musicLoop — ต้องใส่ให้ตรงกับไฟล์")]
         public float musicBpm = 90f;
-        [Tooltip("เร่ง/ลดความเร็วเพลงตาม BPM ของเกม (Climax Shift) เพื่อให้ล็อกจังหวะกันตลอด — แลกกับเสียงเพลงที่คีย์สูงขึ้น")]
+        [Tooltip("ปรับความเร็วเพลงให้ตรงกับ baseBpm เผื่อหาเพลงที่ BPM ไม่ตรงมา\n" +
+                 "pitch = baseBpm / musicBpm และคงที่ตลอดเกม (BPM เกมไม่ขยับแล้ว) จึงไม่มีวันดริฟต์\n" +
+                 "ถ้าสองค่าต่างกันมาก เพลงจะเพี้ยนคีย์ — หาเพลง BPM ตรงมาตั้งแต่แรกดีกว่า")]
         public bool syncMusicPitch = false;
-        [Tooltip("เพดาน pitch กันเพลงเสียงแหลมจนเพี้ยน (1.15 ≈ สูงขึ้นราว 2 เสียง)")]
-        [Range(1f, 2f)] public float maxMusicPitch = 1.15f;
-        [Tooltip("เคาะเสียงบีตเบาๆ ซ้อนบนเพลงด้วย — ตัวชี้จังหวะที่ตรงเป๊ะเสมอแม้เพลงจะดริฟต์")]
+        [Tooltip("เคาะเสียงบีตเบาๆ ซ้อนบนเพลงด้วย — ตัวชี้จังหวะที่ตรงเป๊ะเสมอ")]
         public bool beatTickWithMusic = true;
 
         AudioSource musicSource;
@@ -63,17 +63,29 @@ namespace HBO
 
             musicSource.clip = musicLoop;
             musicSource.volume = 1f;
-            musicSource.pitch = 1f;
+            musicSource.pitch = MusicPitch();
             // PlayScheduled อิง dspTime เดียวกับ Conductor เพลงจึงเริ่มตรงบีตแรกเป๊ะ
             // (Play() ธรรมดาจะเริ่มตอนต้นเฟรมถัดไป คลาดได้หลายสิบมิลลิวินาที)
             musicSource.PlayScheduled(conductor.FirstBeatTime);
+
+            if (syncMusicPitch && Mathf.Abs(MusicPitch() - 1f) > 0.06f)
+                Debug.Log(string.Format(
+                    "[HBO] เพลงถูกปรับความเร็วเป็น {0:0.00} เท่า (musicBpm {1:0} → baseBpm {2:0}) " +
+                    "ห่างเกินหนึ่งเสียงแล้ว คีย์เพลงจะเพี้ยน — หาเพลงที่ BPM ตรงกับ baseBpm มาใช้ดีกว่า",
+                    MusicPitch(), musicBpm, config.baseBpm));
+        }
+
+        /// <summary>ความเร็วเพลงที่ทำให้ตรงกับ baseBpm — คงที่ตลอดเกมเพราะ BPM เกมไม่ขยับ</summary>
+        float MusicPitch()
+        {
+            if (!syncMusicPitch || musicBpm <= 0f || config == null) return 1f;
+            return config.baseBpm / musicBpm;
         }
 
         void Update()
         {
-            if (!musicOn || musicLoop == null || !syncMusicPitch) return;
-            if (conductor == null || musicBpm <= 0f || conductor.CurrentBpm <= 0f) return;
-            musicSource.pitch = Mathf.Min(conductor.CurrentBpm / musicBpm, maxMusicPitch);
+            // เผื่อจูน baseBpm สดๆ ตอน Play mode เพลงจะได้ตามไปด้วย
+            if (musicOn && musicLoop != null && syncMusicPitch) musicSource.pitch = MusicPitch();
         }
 
         public void StopMusic(bool playerWon)

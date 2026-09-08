@@ -5,6 +5,7 @@ namespace HBO
     /// <summary>
     /// วง Pulse หนึ่งวง: หดจากขนาดเริ่มต้นเข้าหาวงเป้า ให้ผู้เล่นกดตอนขนาดพอดี
     /// ตำแหน่ง/ขนาดคำนวณจาก dspTime ตรงๆ จึงไม่เพี้ยนตาม framerate
+    /// เกาะตำแหน่งวงเป้าไว้ตลอด วงจึงเลื่อนตามเวลาที่จุดกดจังหวะย้ายที่
     /// </summary>
     public class PulseRing : MonoBehaviour
     {
@@ -15,20 +16,39 @@ namespace HBO
         public float startScale = 3.2f;
         float targetScale = 1f;
 
+        Conductor conductor;
+        Transform anchor;
+        int targetBeat;
+
         SpriteRenderer sr;
 
-        public void Init(double spawnTime, double hitTime, float targetScale)
+        /// <summary>วงนี้ต้องถูกกดตอนบีตหมายเลข targetBeat ไม่ใช่ตอนเวลาที่ตายตัว</summary>
+        public void Init(Conductor conductor, Transform anchor, double spawnTime, int targetBeat, float targetScale)
         {
+            this.conductor = conductor;
+            this.anchor = anchor;
+            this.targetBeat = targetBeat;
             SpawnTime = spawnTime;
-            HitTime = hitTime;
             this.targetScale = targetScale;
             sr = GetComponent<SpriteRenderer>();
             if (sr != null && sr.sprite == null)
                 sr.sprite = PlaceholderAssets.SharedPulseRing;
+            RefreshHitTime();
             UpdateVisual();
         }
 
-        void Update() { UpdateVisual(); }
+        // เล็งเวลาใหม่ทุกเฟรม เพื่อให้วงลงตรงบีตจริงเสมอแม้ BPM จะถูกจูนระหว่างที่วงกำลังวิ่ง
+        void RefreshHitTime()
+        {
+            if (conductor != null) HitTime = conductor.TimeOfBeat(targetBeat);
+        }
+
+        void Update()
+        {
+            RefreshHitTime();
+            if (anchor != null) transform.position = anchor.position;
+            UpdateVisual();
+        }
 
         void UpdateVisual()
         {
@@ -40,8 +60,10 @@ namespace HBO
 
             if (sr != null)
             {
-                // ค่อยๆ ชัดขึ้นระหว่างวิ่งเข้า สว่างสุดตอนถึงจังหวะ
+                // ค่อยๆ ชัดขึ้นระหว่างวิ่งเข้า สว่างสุดตอนถึงจังหวะ แล้วจางหายเองถ้าเลยจังหวะไป
+                // (ปกติ AutoMissSweep เก็บวงทิ้งก่อนอยู่แล้ว จะเห็นตอนปิดตัดสิน เช่น ช่วงสลับมอนสเตอร์)
                 float a = Mathf.Lerp(0.35f, 1f, Mathf.Clamp01(t));
+                if (t > 1f) a *= Mathf.Clamp01(1f - (t - 1f) * 6f);
                 var c = sr.color; c.a = Consumed ? 0f : a; sr.color = c;
             }
         }
