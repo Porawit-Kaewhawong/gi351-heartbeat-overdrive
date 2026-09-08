@@ -105,6 +105,20 @@ namespace HBO
             if (PlayerHp <= 0) End(false);
         }
 
+        /// <summary>
+        /// ฟื้น HP ผู้เล่น (ตอนนี้ใช้กับ Perfect ระหว่าง Overdrive) — คืนจำนวนที่ฟื้นได้จริง
+        /// ผู้เรียกจะได้รู้ว่าควรขึ้นเอฟเฟกต์ไหม เวลาเลือดเต็มอยู่แล้วจะได้ไม่ขึ้นเก้อ
+        /// </summary>
+        public int HealPlayer(int amount)
+        {
+            if (ended || amount <= 0) return 0;
+            int before = PlayerHp;
+            PlayerHp = Mathf.Min(config.playerMaxHp, PlayerHp + amount);
+            int healed = PlayerHp - before;
+            if (healed > 0) OnChanged?.Invoke();
+            return healed;
+        }
+
         void End(bool playerWon)
         {
             ended = true;

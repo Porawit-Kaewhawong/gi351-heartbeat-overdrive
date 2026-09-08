@@ -6,13 +6,15 @@ namespace HBO
     /// <summary>
     /// ฟังบีตจาก Conductor แล้วปล่อยวง Pulse วิ่งเข้าวงเป้า
     /// เก็บลิสต์วงที่ยังไม่ถูกตัดสินให้ InputJudge ใช้
-    /// และเป็นคนย้ายจุดกดจังหวะไปมาด้วย (วงที่กำลังวิ่งอยู่เกาะจุดนี้ จึงเลื่อนตามไปทั้งชุด)
+    ///
+    /// แบบ osu: **แต่ละโน้ตเกิดคนละตำแหน่ง** และวงเป้า (TargetRing) จะวิ่งไปจ่อโน้ตตัวถัดไป
+    /// ที่ต้องกด ผู้เล่นจึงต้องกวาดสายตาไปมาแทนที่จะจ้องจุดเดียวกลางจอ
     /// </summary>
     public class PulseSpawner : MonoBehaviour
     {
         public GameConfig config;
         public Conductor conductor;
-        [Tooltip("จุดวงเป้า (Timing Zone) ที่วง Pulse วิ่งเข้าหา")]
+        [Tooltip("วงเป้า (Timing Zone) — จะถูกเลื่อนไปจ่อโน้ตตัวถัดไปที่ต้องกด")]
         public Transform target;
         [Tooltip("สไปรต์วง Pulse ของทีมอาร์ต — เว้นว่าง = ใช้วงแหวน placeholder")]
         public Sprite ringSprite;
@@ -25,14 +27,18 @@ namespace HBO
         double nextSpawnBeat;
 
         TargetRing targetRing;
-        Vector3 roamHome, roamFrom, roamTo;
-        float roamT = 1f, roamDuration;
+        Vector3 roamHome;        // จุดตั้งต้นของวงเป้าในซีน ใช้เป็นศูนย์กลางของกรอบสุ่ม
+        Vector3 lastNotePos;     // ตำแหน่งของโน้ตที่ปล่อยไปล่าสุด
+        int pulseCount;
+
+        Vector3 focusFrom, focusTo;
+        float focusT = 1f;
 
         void Awake()
         {
             if (target == null) return;
             roamHome = target.position;
-            roamFrom = roamTo = roamHome;
+            lastNotePos = focusFrom = focusTo = roamHome;
             targetRing = target.GetComponent<TargetRing>();
         }
 
@@ -41,6 +47,8 @@ namespace HBO
             if (spawning) return;
             spawning = true;
             nextSpawnBeat = conductor.NextBeatIndex;
+            pulseCount = 0;
+            lastNotePos = roamHome;
             conductor.OnBeat += HandleBeat;
         }
 
@@ -64,9 +72,6 @@ namespace HBO
             if (!spawning) return;
 
             if (targetRing != null) targetRing.Pulse();
-            if (config.targetRoams && config.targetMoveEveryBeats > 0
-                && beatIndex > 0 && beatIndex % config.targetMoveEveryBeats == 0)
-                PickRoamDestination();
 
             // beatsPerPulse เป็นทศนิยมได้ (2.00 / 1.75 / 1.50 ...) จึงใช้ modulo ไม่ได้
             // สะสมตำแหน่งบีตในอุดมคติไว้แทน แล้วปล่อยวงที่บีตแรกที่เลยตำแหน่งนั้นไป
@@ -80,14 +85,16 @@ namespace HBO
             // เล็งเป็น "หมายเลขบีต" ไม่ใช่เวลา วงจะได้ลงตรงบีตจริงเสมอ
             int targetBeat = beatIndex + Mathf.Max(1, Mathf.RoundToInt(config.approachBeats));
 
+            Vector3 pos = PickNotePosition();
+            pulseCount++;
+
             var go = new GameObject("PulseRing");
-            go.transform.position = target != null ? target.position : Vector3.zero;
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = ringSprite != null ? ringSprite : PlaceholderAssets.SharedPulseRing;
             sr.color = ringColor;
             sr.sortingOrder = 10;
             var ring = go.AddComponent<PulseRing>();
-            ring.Init(conductor, target, spawnTime, targetBeat, TargetScale());
+            ring.Init(conductor, pos, spawnTime, targetBeat, TargetScale());
             Active.Add(ring);
         }
 
@@ -98,31 +105,55 @@ namespace HBO
             return target != null ? target.localScale.x : 1f;
         }
 
-        /// <summary>สุ่มจุดใหม่ให้วงเป้าย้ายไป ห่างจากจุดเดิมพอให้รู้สึกว่าขยับจริง</summary>
-        void PickRoamDestination()
+        /// <summary>
+        /// เลือกตำแหน่งให้โน้ตตัวถัดไป — ย้ายทุกๆ targetMoveEveryPulses โน้ต
+        /// สุ่มใหม่จนกว่าจะห่างจากโน้ตก่อนหน้าเกิน targetMinMoveDistance
+        /// ไม่งั้นบางรอบจะได้จุดที่แทบทับของเดิมจนดูเหมือนไม่ขยับ
+        /// </summary>
+        Vector3 PickNotePosition()
         {
-            if (target == null) return;
-            var area = config.targetRoamArea;
+            if (!config.targetRoams) return roamHome;
 
-            Vector3 pick = roamTo;
-            for (int i = 0; i < 6; i++)
+            int every = Mathf.Max(1, config.targetMoveEveryPulses);
+            if (pulseCount % every != 0) return lastNotePos;
+
+            var area = config.targetRoamArea;
+            Vector3 pick = lastNotePos;
+            for (int i = 0; i < 8; i++)
             {
-                pick = roamHome + new Vector3(Random.Range(-area.x, area.x), Random.Range(-area.y, area.y), 0f);
-                if (Vector3.Distance(pick, target.position) > 1.5f) break;
+                pick = roamHome + new Vector3(
+                    Random.Range(-area.x, area.x), Random.Range(-area.y, area.y), 0f);
+                if (Vector3.Distance(pick, lastNotePos) >= config.targetMinMoveDistance) break;
             }
 
-            roamFrom = target.position;
-            roamTo = pick;
-            roamDuration = Mathf.Max(0.05f, config.targetMoveDuration);
-            roamT = 0f;
+            lastNotePos = pick;
+            return pick;
+        }
+
+        /// <summary>โน้ตตัวถัดไปที่ต้องกด — วงเป้าจะวิ่งไปจ่อจุดนี้</summary>
+        Vector3 NextNoteFocus()
+        {
+            for (int i = 0; i < Active.Count; i++)
+                if (Active[i] != null && !Active[i].Consumed) return Active[i].transform.position;
+            return roamHome; // ไม่มีวงในสนาม กลับไปรอที่จุดตั้งต้น
         }
 
         void Update()
         {
-            if (target == null || roamT >= 1f) return;
-            roamT = Mathf.Min(1f, roamT + Time.unscaledDeltaTime / roamDuration);
-            float e = roamT * roamT * (3f - 2f * roamT); // smoothstep เข้า-ออกนุ่ม
-            target.position = Vector3.Lerp(roamFrom, roamTo, e);
+            if (target == null) return;
+
+            Vector3 want = NextNoteFocus();
+            if ((want - focusTo).sqrMagnitude > 0.0001f)
+            {
+                focusFrom = target.position;
+                focusTo = want;
+                focusT = 0f;
+            }
+
+            if (focusT >= 1f) return;
+            focusT = Mathf.Min(1f, focusT + Time.unscaledDeltaTime / Mathf.Max(0.02f, config.targetMoveDuration));
+            float e = focusT * focusT * (3f - 2f * focusT); // smoothstep เข้า-ออกนุ่ม
+            target.position = Vector3.Lerp(focusFrom, focusTo, e);
         }
 
         public void Remove(PulseRing ring)

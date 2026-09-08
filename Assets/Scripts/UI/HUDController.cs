@@ -31,6 +31,8 @@ namespace HBO
         public Text overdriveLabel;
 
         float judgementTimer;
+        Text healText;
+        float healTimer;
 
         void Start()
         {
@@ -39,6 +41,39 @@ namespace HBO
             if (comboText != null) comboText.text = "";
             if (judgementText != null) judgementText.text = "";
             EnsureOverdriveBar();
+            EnsureHealText();
+        }
+
+        /// <summary>ป้าย "+N HP" ใต้หลอดเลือดผู้เล่น — สร้างตอนรัน ไม่ต้องแก้ซีน</summary>
+        void EnsureHealText()
+        {
+            if (healText != null) return;
+
+            var go = new GameObject("HealText", typeof(RectTransform));
+            go.transform.SetParent(transform, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
+            rt.anchoredPosition = new Vector2(46f, -104f);
+            rt.sizeDelta = new Vector2(320f, 40f);
+
+            healText = go.AddComponent<Text>();
+            healText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            healText.fontSize = 30;
+            healText.fontStyle = FontStyle.Bold;
+            healText.alignment = TextAnchor.MiddleLeft;
+            healText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            healText.verticalOverflow = VerticalWrapMode.Overflow;
+            healText.raycastTarget = false;
+            healText.text = "";
+            healText.color = new Color(0.45f, 1f, 0.6f, 0f);
+        }
+
+        /// <summary>Perfect ระหว่าง Overdrive ฟื้นเลือด — บอกให้ผู้เล่นเห็นว่าเลือดขึ้นเพราะอะไร</summary>
+        public void ShowHeal(int amount)
+        {
+            EnsureHealText();
+            healTimer = 0.8f;
+            healText.text = "+" + amount + " HP";
         }
 
         /// <summary>สร้างหลอด Overdrive ตอนรันถ้ายังไม่ถูกต่อสายไว้ — จะได้ไม่ต้องรัน Setup Main Scene ใหม่</summary>
@@ -178,6 +213,14 @@ namespace HBO
                 var c = judgementText.color;
                 c.a = Mathf.Clamp01(judgementTimer / 0.3f);
                 judgementText.color = c;
+            }
+
+            if (healText != null && healTimer > 0f)
+            {
+                healTimer -= Time.deltaTime;
+                var c = healText.color;
+                c.a = Mathf.Clamp01(healTimer / 0.35f);
+                healText.color = c;
             }
         }
 

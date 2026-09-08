@@ -4,8 +4,9 @@ namespace HBO
 {
     /// <summary>
     /// วง Pulse หนึ่งวง: หดจากขนาดเริ่มต้นเข้าหาวงเป้า ให้ผู้เล่นกดตอนขนาดพอดี
-    /// ตำแหน่ง/ขนาดคำนวณจาก dspTime ตรงๆ จึงไม่เพี้ยนตาม framerate
-    /// เกาะตำแหน่งวงเป้าไว้ตลอด วงจึงเลื่อนตามเวลาที่จุดกดจังหวะย้ายที่
+    /// ขนาดคำนวณจาก dspTime ตรงๆ จึงไม่เพี้ยนตาม framerate
+    /// **แต่ละวงปักอยู่ที่ตำแหน่งของตัวเองแบบ osu** ไม่เกาะวงเป้ากลาง
+    /// (ถ้าให้ทุกวงเกาะจุดเดียวกัน พอจุดนั้นย้าย วงที่ลอยอยู่จะย้ายตามยกแผง อ่านไม่ออก)
     /// </summary>
     public class PulseRing : MonoBehaviour
     {
@@ -17,17 +18,16 @@ namespace HBO
         float targetScale = 1f;
 
         Conductor conductor;
-        Transform anchor;
         int targetBeat;
 
         SpriteRenderer sr;
 
         /// <summary>วงนี้ต้องถูกกดตอนบีตหมายเลข targetBeat ไม่ใช่ตอนเวลาที่ตายตัว</summary>
-        public void Init(Conductor conductor, Transform anchor, double spawnTime, int targetBeat, float targetScale)
+        public void Init(Conductor conductor, Vector3 position, double spawnTime, int targetBeat, float targetScale)
         {
             this.conductor = conductor;
-            this.anchor = anchor;
             this.targetBeat = targetBeat;
+            transform.position = position;
             SpawnTime = spawnTime;
             this.targetScale = targetScale;
             sr = GetComponent<SpriteRenderer>();
@@ -46,7 +46,6 @@ namespace HBO
         void Update()
         {
             RefreshHitTime();
-            if (anchor != null) transform.position = anchor.position;
             UpdateVisual();
         }
 

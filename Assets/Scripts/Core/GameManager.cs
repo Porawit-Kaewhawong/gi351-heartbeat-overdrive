@@ -92,6 +92,25 @@ namespace HBO
             return spawner != null && spawner.target != null ? spawner.target.position : Vector3.zero;
         }
 
+        /// <summary>ตำแหน่งของโน้ตที่เพิ่งถูกตี — โน้ตแต่ละตัวอยู่คนละที่ เอฟเฟกต์ต้องไปโผล่ตรงนั้น</summary>
+        Vector3 HitPos(PulseRing ring)
+        {
+            return ring != null ? ring.transform.position : TargetPos();
+        }
+
+        /// <summary>Perfect ระหว่าง Overdrive ฟื้นเลือดให้ — เป็นรางวัลอีกชั้นที่ Great ไม่มีทางได้</summary>
+        void HealDuringOverdrive()
+        {
+            if (!InOverdrive || config.overdriveHealPerPerfect <= 0) return;
+
+            int healed = health.HealPlayer(config.overdriveHealPerPerfect);
+            if (healed <= 0) return; // เลือดเต็มอยู่แล้ว ไม่ต้องขึ้นเอฟเฟกต์ให้เก้อ
+
+            Vector3 at = playerVisual != null ? playerVisual.transform.position : TargetPos();
+            HitBurst.Spawn(at, new Color(0.45f, 1f, 0.6f, 0.9f), 0.6f, 2.6f, 0.42f);
+            hud.ShowHeal(healed);
+        }
+
         void Start()
         {
             health.ResetAll();
@@ -168,9 +187,11 @@ namespace HBO
                     health.DamageEnemy(Scaled(config.perfectDamage + bonus));
                     feedback.OnPerfect();
                     // เอฟเฟกต์ระเบิดวงเฉพาะ Perfect — Great ไม่มี ให้แยกออกจากกันด้วยตา
-                    HitBurst.Spawn(TargetPos(),
+                    // ระเบิดที่ตำแหน่งของโน้ตที่เพิ่งตี ไม่ใช่กลางจอ เพราะแต่ละโน้ตอยู่คนละที่แล้ว
+                    HitBurst.Spawn(HitPos(ring),
                         InOverdrive ? new Color(1f, 0.45f, 0.35f, 0.95f) : new Color(1f, 0.85f, 0.2f, 0.9f),
                         1.1f, InOverdrive ? 4.2f : 3.2f, 0.34f);
+                    HealDuringOverdrive();
                     AddOverdrive(config.overdrivePerPerfect);
                     if (enemyVisual != null) enemyVisual.FlashHurt();
                     if (playerVisual != null) playerVisual.PlayAttack();
