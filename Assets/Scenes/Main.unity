@@ -177,8 +177,9 @@ MonoBehaviour:
   minBeatsPerPulse: 1
   approachBeats: 2
   targetRoams: 1
-  targetMoveEveryBeats: 8
+  targetMoveEveryPulses: 3
   targetRoamArea: {x: 3.5, y: 1.2}
+  targetMinMoveDistance: 2
   targetMoveDuration: 0.7
   overdrivePerPerfect: 14
   overdrivePerGreat: 0
@@ -186,6 +187,7 @@ MonoBehaviour:
   overdriveBeats: 8
   overdriveDamageMultiplier: 2
   overdriveBlocksCounter: 1
+  overdriveHealPerPerfect: 3
   perfectWindow: 0.065
   greatWindow: 0.13
   lateMissGrace: 0.15
