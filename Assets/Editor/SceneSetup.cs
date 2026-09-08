@@ -50,14 +50,12 @@ public static class SceneSetup
         playerGo.transform.localScale = Vector3.one * 1.5f;
         var playerVis = playerGo.AddComponent<CharacterVisual>();
         playerVis.bodyColor = new Color(0.35f, 0.85f, 1f);
-        playerVis.lungeDirection = 1f;
 
         var enemyGo = new GameObject("Enemy");
         enemyGo.transform.position = new Vector3(3.2f, -1.2f, 0f);
         enemyGo.transform.localScale = Vector3.one * 1.8f;
         var enemyVis = enemyGo.AddComponent<CharacterVisual>();
         enemyVis.bodyColor = new Color(1f, 0.45f, 0.4f);
-        enemyVis.lungeDirection = -1f;
 
         var targetGo = new GameObject("TimingTarget");
         targetGo.transform.position = new Vector3(0f, 1.4f, 0f);
