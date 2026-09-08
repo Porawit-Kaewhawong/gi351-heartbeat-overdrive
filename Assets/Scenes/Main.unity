@@ -176,29 +176,63 @@ MonoBehaviour:
   beatsPerPulseStep: 0.25
   minBeatsPerPulse: 1
   approachBeats: 2
+  targetRoams: 1
+  targetMoveEveryBeats: 8
+  targetRoamArea: {x: 3.5, y: 1.2}
+  targetMoveDuration: 0.7
+  overdrivePerPerfect: 14
+  overdrivePerGreat: 0
+  overdriveLossOnMiss: 30
+  overdriveBeats: 8
+  overdriveDamageMultiplier: 2
+  overdriveBlocksCounter: 1
   perfectWindow: 0.065
   greatWindow: 0.13
   lateMissGrace: 0.15
   inputCooldown: 0.2
   enemies:
-  - name: Skin Walker Phrase 1
+  - name: Tree
     maxHp: 100
-    sprite: {fileID: -8667466294985060184, guid: 189133c890400284993af6b2ba41d4d7, type: 3}
-    attackSprites: []
-    bodyColor: {r: 1, g: 0.62, b: 0.35, a: 1}
+    sprite: {fileID: 21300000, guid: 1566f582af1f1e149bb4a112af9ec78b, type: 3}
+    attackSprites:
+    - {fileID: 21300000, guid: 691a4a68a8cf6c644b3657480b101804, type: 3}
+    bodyColor: {r: 1, g: 1, b: 1, a: 1}
     scale: 0.5
-  - name: Skin Walker Phrase 2
+  - name: Skeleton Phrase 1
     maxHp: 150
-    sprite: {fileID: -8667466294985060184, guid: 189133c890400284993af6b2ba41d4d7, type: 3}
-    attackSprites: []
-    bodyColor: {r: 0.85, g: 0.45, b: 1, a: 1}
-    scale: 0.75
-  - name: Skin Walker Phrase 3
+    sprite: {fileID: 21300000, guid: a64bf9a1c5e3b5a47948107171ca1cd2, type: 3}
+    attackSprites:
+    - {fileID: 21300000, guid: bfd228dc2d696f645affe311c4ccc92d, type: 3}
+    bodyColor: {r: 1, g: 1, b: 1, a: 1}
+    scale: 0.5
+  - name: Skeleton Phrase 2
     maxHp: 200
-    sprite: {fileID: -8667466294985060184, guid: 189133c890400284993af6b2ba41d4d7, type: 3}
-    attackSprites: []
-    bodyColor: {r: 1, g: 0.32, b: 0.34, a: 1}
-    scale: 1
+    sprite: {fileID: 21300000, guid: a64bf9a1c5e3b5a47948107171ca1cd2, type: 3}
+    attackSprites:
+    - {fileID: 21300000, guid: bfd228dc2d696f645affe311c4ccc92d, type: 3}
+    bodyColor: {r: 1, g: 0, b: 0, a: 1}
+    scale: 0.5
+  - name: Spider Phrase 1
+    maxHp: 250
+    sprite: {fileID: 21300000, guid: e9e100ab36ac60d4b9235c2fc8987e3e, type: 3}
+    attackSprites:
+    - {fileID: 21300000, guid: f30bfc654313e1748ad3440257a65fff, type: 3}
+    bodyColor: {r: 1, g: 1, b: 1, a: 1}
+    scale: 0.5
+  - name: Spider Phrase 2
+    maxHp: 300
+    sprite: {fileID: 21300000, guid: e9e100ab36ac60d4b9235c2fc8987e3e, type: 3}
+    attackSprites:
+    - {fileID: 21300000, guid: f30bfc654313e1748ad3440257a65fff, type: 3}
+    bodyColor: {r: 1, g: 0, b: 0.028901577, a: 1}
+    scale: 0.5
+  - name: Spider Phrase 3
+    maxHp: 350
+    sprite: {fileID: 21300000, guid: e9e100ab36ac60d4b9235c2fc8987e3e, type: 3}
+    attackSprites:
+    - {fileID: 21300000, guid: f30bfc654313e1748ad3440257a65fff, type: 3}
+    bodyColor: {r: 0.8185973, g: 0, b: 1, a: 1}
+    scale: 0.5
   enemyFadeOutTime: 0.55
   enemyFadeInTime: 0.4
   playerMaxHp: 100
@@ -458,7 +492,6 @@ MonoBehaviour:
   attackSprites: []
   attackPoseTime: 0.18
   bodyColor: {r: 1, g: 1, b: 1, a: 1}
-  lungeDirection: -3
 --- !u!4 &343766633
 Transform:
   m_ObjectHideFlags: 0
@@ -586,7 +619,6 @@ MonoBehaviour:
   - {fileID: 5655321678828108626, guid: e17b1c41f6e4a4444b4f95d1ff78dca2, type: 3}
   attackPoseTime: 0.18
   bodyColor: {r: 1, g: 1, b: 1, a: 1}
-  lungeDirection: 3
 --- !u!4 &522555392
 Transform:
   m_ObjectHideFlags: 0
@@ -1178,6 +1210,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HBO.TargetRing
   color: {r: 1, g: 1, b: 1, a: 0.9}
+  pulseScale: 0.12
 --- !u!212 &1055869832
 SpriteRenderer:
   serializedVersion: 2
@@ -1542,6 +1575,8 @@ MonoBehaviour:
   readyPanel: {fileID: 1715593027}
   resultPanel: {fileID: 527155768}
   resultText: {fileID: 1163926594}
+  overdriveFill: {fileID: 0}
+  overdriveLabel: {fileID: 0}
 --- !u!114 &1474335047
 MonoBehaviour:
   m_ObjectHideFlags: 0
