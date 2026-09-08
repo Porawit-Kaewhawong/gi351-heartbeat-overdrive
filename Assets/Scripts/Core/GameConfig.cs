@@ -53,15 +53,17 @@ namespace HBO
             return Mathf.Max(minBeatsPerPulse, beatsPerPulse - steps * beatsPerPulseStep);
         }
 
-        [Header("Timing Target (จุดกดจังหวะย้ายที่ได้)")]
-        [Tooltip("ให้จุดกดจังหวะเลื่อนไปมา แทนที่จะปักอยู่กลางจอตลอด")]
+        [Header("Timing Target (จุดกดจังหวะย้ายที่ได้ แบบ osu)")]
+        [Tooltip("ให้จุดกดจังหวะย้ายที่ แทนที่จะปักอยู่กลางจอตลอด")]
         public bool targetRoams = true;
-        [Tooltip("ย้ายจุดกดทุกๆ กี่บีต")]
-        public int targetMoveEveryBeats = 8;
+        [Tooltip("ย้ายจุดกดทุกๆ กี่ **โน้ต** (1 = ทุกวงอยู่คนละที่ = โหดแบบ osu, 2 = ย้ายทุกสองวง)")]
+        public int targetMoveEveryPulses = 1;
         [Tooltip("ขอบเขตการย้าย (ครึ่งความกว้าง, ครึ่งความสูง) รอบจุดตั้งต้นในซีน")]
-        public Vector2 targetRoamArea = new Vector2(3.5f, 1.2f);
-        [Tooltip("ใช้เวลาเลื่อนไปจุดใหม่กี่วินาที — สั้นไปจะกระชากจนเล็งไม่ทัน")]
-        public float targetMoveDuration = 0.7f;
+        public Vector2 targetRoamArea = new Vector2(4.2f, 1.6f);
+        [Tooltip("ระยะห่างขั้นต่ำจากโน้ตก่อนหน้า — กันไม่ให้สุ่มได้จุดเดิมซ้ำจนเหมือนไม่ขยับ")]
+        public float targetMinMoveDistance = 2f;
+        [Tooltip("วงเป้าเลื่อนไปหาโน้ตถัดไปเร็วแค่ไหน (วินาที) — สั้นๆ ให้ตามทันแบบ osu")]
+        public float targetMoveDuration = 0.18f;
 
         [Header("Overdrive (สะสมได้จาก Perfect เท่านั้น)")]
         [Tooltip("Perfect หนึ่งครั้งเติมเกจกี่หน่วย (เกจเต็มที่ 100)")]
@@ -76,6 +78,8 @@ namespace HBO
         public float overdriveDamageMultiplier = 2f;
         [Tooltip("ระหว่าง Overdrive กด Miss จะไม่โดนสวนกลับ แต่ Overdrive หลุดทันที")]
         public bool overdriveBlocksCounter = true;
+        [Tooltip("ระหว่าง Overdrive ตี Perfect ได้ฟื้น HP ครั้งละเท่าไหร่ (0 = ปิดการฟื้นเลือด)")]
+        public int overdriveHealPerPerfect = 3;
 
         [Header("Judgement Windows (วินาที)")]
         public float perfectWindow = 0.065f;
